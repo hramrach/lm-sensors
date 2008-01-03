@@ -34,7 +34,7 @@
 # the user doesn't have a bad surprise when uncommenting them.
 
 use strict;
-use vars qw($debug $chip %trans @delete %chip_trans %chip_delete);
+use vars qw($debug $chip %trans @delete %chip_trans %chip_delete $first_part $second_part $compute_next);
 
 BEGIN
 {
@@ -479,4 +479,18 @@ elsif (m/^[\s#]*(?:label|ignore|set|compute)\s+(\S+)\s/) {
 		# Substitute feature names
 		$_ = substitute_line($chip, $_);
 	}
+}
+
+# Formula changes (in0 -> in0_input)
+if (m/^([\s#]*compute\s+\S+)(.*)/) {
+	$first_part = $1;
+	$second_part = $2;
+	$second_part =~ s/in(\d+)/in$1_input/gi;
+	$_ = "$first_part$second_part\n";
+	$compute_next = 1 if (m/\\$/);
+} elsif ($compute_next) {
+	s/in(\d+)/in$1_input/gi;
+	$compute_next = 0 if (! m/\\$/);
+} else {
+	$compute_next = 0;
 }
