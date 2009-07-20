@@ -150,7 +150,7 @@ ifeq ($(DEBUG),1)
 ALL_CPPFLAGS += -DDEBUG
 ALL_CFLAGS += -O -g
 else
-ALL_CFLAGS += -O2
+ALL_CFLAGS += $(RPM_OPT_FLAGS)
 endif
 
 ifeq ($(WARN),1)
