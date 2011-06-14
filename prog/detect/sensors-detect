@@ -3100,8 +3100,8 @@ use vars qw($kernel_version @kernel_version $kernel_arch);
 sub initialize_kernel_version
 {
 	chomp($kernel_version = `uname -r`);
-	$kernel_version =~ /(\d+)\.(\d+)\.(\d+)(.*)/;
-	@kernel_version = ($1, $2, $3, $4);
+	$kernel_version =~ /(\d+)\.(\d+)(?:\.(\d+))?(.*)/;
+	@kernel_version = ($1, $2, $3 || 0, $4);
 	chomp($kernel_arch = `uname -m`);
 
 	# We only support kernels >= 2.6.5
