@@ -6,7 +6,7 @@ After=lm_sensors.service
 EnvironmentFile=/etc/sysconfig/sensord
 Type=forking
 PIDFile=/run/sensord.pid
-ExecStart=/usr/sbin/sensord -i $INTERVAL -l $LOG_INTERVAL -f daemon
+ExecStart=/usr/sbin/sensord -i $INTERVAL -l $LOG_INTERVAL -f daemon $SENSORD_ARGS
 
 [Install]
 WantedBy=multi-user.target
