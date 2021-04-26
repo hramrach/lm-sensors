@@ -38,7 +38,7 @@
 #
 #
 
-PIDFILE="/var/run/fancontrol.pid"
+PIDFILE="/run/fancontrol.pid"
 
 #DEBUG=1
 MAX=255

@@ -33,7 +33,7 @@
 #include "version.h"
 
 struct sensord_arguments sensord_args = {
- 	.pidFile = "/var/run/sensord.pid",
+ 	.pidFile = "/run/sensord.pid",
  	.scanTime = 60,
  	.logTime = 30 * 60,
  	.rrdTime = 5 * 60,
@@ -97,7 +97,7 @@ static const char *daemonSyntax =
 	"  -T, --rrd-no-average      -- switch RRD in non-average mode\n"
 	"  -r, --rrd-file <file>     -- RRD file (default <none>)\n"
 	"  -c, --config-file <file>  -- configuration file\n"
-	"  -p, --pid-file <file>     -- PID file (default /var/run/sensord.pid)\n"
+	"  -p, --pid-file <file>     -- PID file (default /run/sensord.pid)\n"
 	"  -f, --syslog-facility <f> -- syslog facility to use (default local4)\n"
 	"  -g, --rrd-cgi <img-dir>   -- output an RRD CGI script and exit\n"
 	"  -a, --load-average        -- include load average in RRD file\n"
