@@ -30,7 +30,7 @@
 #
 
 LM_VERSION='3.6.1'
-PIDFILE="/var/run/fancontrol.pid"
+PIDFILE="/run/fancontrol.pid"
 USERDIR=$(pwd)
 
 if [ -f "$PIDFILE" ]
