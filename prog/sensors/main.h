@@ -20,9 +20,11 @@
 
 #ifndef PROG_SENSORS_MAIN_H
 #define PROG_SENSORS_MAIN_H
+#include "lib/sensors.h"
 
 extern int fahrenheit;
 extern int new_json;
 extern char degstr[5];
+extern sensors_config *config;
 
 #endif /* PROG_SENSORS_MAIN_H */
