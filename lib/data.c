@@ -33,26 +33,7 @@
 
 const char *libsensors_version = LM_VERSION;
 
-char **sensors_config_files = NULL;
-int sensors_config_files_count = 0;
-int sensors_config_files_max = 0;
-
-sensors_chip *sensors_config_chips = NULL;
-int sensors_config_chips_count = 0;
-int sensors_config_chips_subst = 0;
-int sensors_config_chips_max = 0;
-
-sensors_bus *sensors_config_busses = NULL;
-int sensors_config_busses_count = 0;
-int sensors_config_busses_max = 0;
-
-sensors_chip_features *sensors_proc_chips = NULL;
-int sensors_proc_chips_count = 0;
-int sensors_proc_chips_max = 0;
-
-sensors_bus *sensors_proc_bus = NULL;
-int sensors_proc_bus_count = 0;
-int sensors_proc_bus_max = 0;
+sensors_config global_sensors_config;
 
 void sensors_free_chip_name(sensors_chip_name *chip)
 {
@@ -231,16 +212,17 @@ int sensors_parse_bus_id(const char *name, sensors_bus_id *bus)
 	return 0;
 }
 
-static int sensors_substitute_chip(sensors_chip_name *name,
+static int sensors_substitute_chip(sensors_config *config,
+				   sensors_chip_name *name,
 				   const char *filename, int lineno)
 {
 	int i, j;
-	for (i = 0; i < sensors_config_busses_count; i++)
-		if (sensors_config_busses[i].bus.type == name->bus.type &&
-		    sensors_config_busses[i].bus.nr == name->bus.nr)
+	for (i = 0; i < config->busses_count; i++)
+		if (config->busses[i].bus.type == name->bus.type &&
+		    config->busses[i].bus.nr == name->bus.nr)
 			break;
 
-	if (i == sensors_config_busses_count) {
+	if (i == config->busses_count) {
 		sensors_parse_error_wfn("Undeclared bus id referenced",
 					filename, lineno);
 		name->bus.nr = SENSORS_BUS_NR_IGNORE;
@@ -248,10 +230,10 @@ static int sensors_substitute_chip(sensors_chip_name *name,
 	}
 
 	/* Compare the adapter names */
-	for (j = 0; j < sensors_proc_bus_count; j++) {
-		if (!strcmp(sensors_config_busses[i].adapter,
-			    sensors_proc_bus[j].adapter)) {
-			name->bus.nr = sensors_proc_bus[j].bus.nr;
+	for (j = 0; j < config->bus_count; j++) {
+		if (!strcmp(config->busses[i].adapter,
+			    config->bus[j].adapter)) {
+			name->bus.nr = config->bus[j].bus.nr;
 			return 0;
 		}
 	}
@@ -263,33 +245,33 @@ static int sensors_substitute_chip(sensors_chip_name *name,
 }
 
 /* Bus substitution is on a per-configuration file basis, so we keep
-   memory (in sensors_config_chips_subst) of which chip entries have been
+   memory (in config->chips_subst) of which chip entries have been
    already substituted. */
-int sensors_substitute_busses(void)
+int sensors_substitute_busses(sensors_config *config)
 {
 	int err, i, j, lineno;
 	sensors_chip_name_list *chips;
 	const char *filename;
 	int res = 0;
 
-	for (i = sensors_config_chips_subst;
-	     i < sensors_config_chips_count; i++) {
-		filename = sensors_config_chips[i].line.filename;
-		lineno = sensors_config_chips[i].line.lineno;
-		chips = &sensors_config_chips[i].chips;
+	for (i = config->chips_subst;
+	     i < config->chips_count; i++) {
+		filename = config->chips[i].line.filename;
+		lineno = config->chips[i].line.lineno;
+		chips = &config->chips[i].chips;
 		for (j = 0; j < chips->fits_count; j++) {
 			/* We can only substitute if a specific bus number
 			   is given. */
 			if (chips->fits[j].bus.nr == SENSORS_BUS_NR_ANY)
 				continue;
 
-			err = sensors_substitute_chip(&chips->fits[j],
+			err = sensors_substitute_chip(config, &chips->fits[j],
 						      filename, lineno);
 			if (err)
 				res = err;
 		}
 	}
-	sensors_config_chips_subst = sensors_config_chips_count;
+	config->chips_subst = config->chips_count;
 	return res;
 }
 

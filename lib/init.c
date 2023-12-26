@@ -50,18 +50,18 @@ static void free_bus(sensors_bus *bus)
 	free(bus->adapter);
 }
 
-static void free_config_busses(void)
+static void free_config_busses(sensors_config *config)
 {
 	int i;
 
-	for (i = 0; i < sensors_config_busses_count; i++)
-		free_bus(&sensors_config_busses[i]);
-	free(sensors_config_busses);
-	sensors_config_busses = NULL;
-	sensors_config_busses_count = sensors_config_busses_max = 0;
+	for (i = 0; i < config->busses_count; i++)
+		free_bus(&config->busses[i]);
+	free(config->busses);
+	config->busses = NULL;
+	config->busses_count = config->busses_max = 0;
 }
 
-static int parse_config(FILE *input, const char *name)
+static int parse_config(sensors_config *config, FILE *input, const char *name)
 {
 	int err;
 	char *name_copy;
@@ -81,17 +81,17 @@ static int parse_config(FILE *input, const char *name)
 		err = -SENSORS_ERR_PARSE;
 		goto exit_cleanup;
 	}
-	err = sensors_yyparse(current_chip, yyscanner);
+	err = sensors_yyparse(config, current_chip, yyscanner);
 	sensors_scanner_exit(yyscanner);
 	if (err) {
 		err = -SENSORS_ERR_PARSE;
 		goto exit_cleanup;
 	}
 
-	err = sensors_substitute_busses();
+	err = sensors_substitute_busses(config);
 
 exit_cleanup:
-	free_config_busses();
+	free_config_busses(config);
 	return err;
 }
 
@@ -100,7 +100,7 @@ static int config_file_filter(const struct dirent *entry)
 	return entry->d_name[0] != '.';		/* Skip hidden files */
 }
 
-static int add_config_from_dir(const char *dir)
+static int add_config_from_dir(sensors_config *config, const char *dir)
 {
 	int count, res, i;
 	struct dirent **namelist;
@@ -134,7 +134,7 @@ static int add_config_from_dir(const char *dir)
 
 		input = fopen(path, "r");
 		if (input) {
-			res = parse_config(input, path);
+			res = parse_config(config, input, path);
 			fclose(input);
 		} else {
 			res = -SENSORS_ERR_PARSE;
@@ -152,18 +152,41 @@ static int add_config_from_dir(const char *dir)
 
 /* Ideally, initialization and configuraton file loading should be exposed
    separately, to make it possible to load several configuration files. */
+static int __sensors_init(sensors_config *config, FILE *input);
 int sensors_init(FILE *input)
+{
+	return __sensors_init(&global_sensors_config, input);
+}
+sensors_config *sensors_init_r(FILE *input, int *err)
+{
+	int res = 0;
+	sensors_config *config = calloc(1, sizeof(sensors_config));
+	if (config) {
+		res = __sensors_init(config, input);
+		if (res) {
+			free(config);
+			config = NULL;
+		}
+	} else {
+		res = -SENSORS_ERR_PARSE;
+	}
+	if (err)
+		*err = res;
+	return config;
+}
+static void __sensors_cleanup(sensors_config *config);
+int __sensors_init(sensors_config *config, FILE *input)
 {
 	int res;
 
-	if (!sensors_init_sysfs())
+	if (!sensors_init_sysfs(config))
 		return -SENSORS_ERR_KERNEL;
-	if ((res = sensors_read_sysfs_bus()) ||
-	    (res = sensors_read_sysfs_chips()))
+	if ((res = sensors_read_sysfs_bus(config)) ||
+	    (res = sensors_read_sysfs_chips(config)))
 		goto exit_cleanup;
 
 	if (input) {
-		res = parse_config(input, NULL);
+		res = parse_config(config, input, NULL);
 		if (res)
 			goto exit_cleanup;
 	} else {
@@ -174,7 +197,7 @@ int sensors_init(FILE *input)
 		if (!input && errno == ENOENT)
 			input = fopen(name = ALT_CONFIG_FILE, "r");
 		if (input) {
-			res = parse_config(input, name);
+			res = parse_config(config, input, name);
 			fclose(input);
 			if (res)
 				goto exit_cleanup;
@@ -186,7 +209,7 @@ int sensors_init(FILE *input)
 		}
 
 		/* Also check for files in default directory */
-		res = add_config_from_dir(DEFAULT_CONFIG_DIR);
+		res = add_config_from_dir(config, DEFAULT_CONFIG_DIR);
 		if (res)
 			goto exit_cleanup;
 	}
@@ -194,7 +217,7 @@ int sensors_init(FILE *input)
 	return 0;
 
 exit_cleanup:
-	sensors_cleanup();
+	__sensors_cleanup(config);
 	return res;
 }
 
@@ -283,34 +306,45 @@ static void free_chip(sensors_chip *chip)
 	chip->ignores_count = chip->ignores_max = 0;
 }
 
+static void __sensors_cleanup(sensors_config *config);
 void sensors_cleanup(void)
+{
+	__sensors_cleanup(&global_sensors_config);
+}
+void sensors_cleanup_r(sensors_config *config){
+	if (config) {
+		__sensors_cleanup(config);
+		free(config);
+	}
+}
+static void __sensors_cleanup(sensors_config *config)
 {
 	int i;
 
-	for (i = 0; i < sensors_proc_chips_count; i++) {
-		free_chip_name(&sensors_proc_chips[i].chip);
-		free_chip_features(&sensors_proc_chips[i]);
+	for (i = 0; i < config->features_count; i++) {
+		free_chip_name(&config->features[i].chip);
+		free_chip_features(&config->features[i]);
 	}
-	free(sensors_proc_chips);
-	sensors_proc_chips = NULL;
-	sensors_proc_chips_count = sensors_proc_chips_max = 0;
+	free(config->features);
+	config->features = NULL;
+	config->features_count = config->features_max = 0;
 
-	for (i = 0; i < sensors_config_chips_count; i++)
-		free_chip(&sensors_config_chips[i]);
-	free(sensors_config_chips);
-	sensors_config_chips = NULL;
-	sensors_config_chips_count = sensors_config_chips_max = 0;
-	sensors_config_chips_subst = 0;
+	for (i = 0; i < config->chips_count; i++)
+		free_chip(&config->chips[i]);
+	free(config->chips);
+	config->chips = NULL;
+	config->chips_count = config->chips_max = 0;
+	config->chips_subst = 0;
 
-	for (i = 0; i < sensors_proc_bus_count; i++)
-		free_bus(&sensors_proc_bus[i]);
-	free(sensors_proc_bus);
-	sensors_proc_bus = NULL;
-	sensors_proc_bus_count = sensors_proc_bus_max = 0;
+	for (i = 0; i < config->bus_count; i++)
+		free_bus(&config->bus[i]);
+	free(config->bus);
+	config->bus = NULL;
+	config->bus_count = config->bus_max = 0;
 
-	for (i = 0; i < sensors_config_files_count; i++)
-		free(sensors_config_files[i]);
-	free(sensors_config_files);
-	sensors_config_files = NULL;
-	sensors_config_files_count = sensors_config_files_max = 0;
+	for (i = 0; i < config->files_count; i++)
+		free(config->files[i]);
+	free(config->files);
+	config->files = NULL;
+	config->files_count = config->files_max = 0;
 }

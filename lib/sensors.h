@@ -69,16 +69,20 @@ typedef struct sensors_chip_name {
 	char *path;
 } sensors_chip_name;
 
+typedef struct sensors_config sensors_config;
+
 /* Load the configuration file and the detected chips list. If this
    returns a value unequal to zero, you are in trouble; you can not
    assume anything will be initialized properly. If you want to
    reload the configuration file, call sensors_cleanup() below before
    calling sensors_init() again. */
 int sensors_init(FILE *input);
+sensors_config *sensors_init_r(FILE *input, int *err);
 
 /* Clean-up function: You can't access anything after
    this, until the next sensors_init() call! */
 void sensors_cleanup(void);
+void sensors_cleanup_r(sensors_config *config);
 
 /* Parse a chip name to the internal representation. Return 0 on success, <0
    on error. */
@@ -97,6 +101,7 @@ int sensors_snprintf_chip_name(char *str, size_t size,
    as used within the sensors_chip_name structure. If it could not be found,
    it returns NULL */
 const char *sensors_get_adapter_name(const sensors_bus_id *bus);
+const char *sensors_get_adapter_name_r(sensors_config* config, const sensors_bus_id *bus);
 
 typedef struct sensors_feature sensors_feature;
 
@@ -106,22 +111,32 @@ typedef struct sensors_feature sensors_feature;
    If no label exists for this feature, its name is returned itself. */
 char *sensors_get_label(const sensors_chip_name *name,
 			const sensors_feature *feature);
+char *sensors_get_label_r(sensors_config* config,
+			  const sensors_chip_name *name,
+			  const sensors_feature *feature);
 
 /* Read the value of a subfeature of a certain chip. Note that chip should not
    contain wildcard values! This function will return 0 on success, and <0
    on failure.  */
 int sensors_get_value(const sensors_chip_name *name, int subfeat_nr,
 		      double *value);
+int sensors_get_value_r(sensors_config* config,
+			const sensors_chip_name *name, int subfeat_nr,
+			double *value);
 
 /* Set the value of a subfeature of a certain chip. Note that chip should not
    contain wildcard values! This function will return 0 on success, and <0
    on failure. */
 int sensors_set_value(const sensors_chip_name *name, int subfeat_nr,
 		      double value);
+int sensors_set_value_r(sensors_config* config,
+			const sensors_chip_name *name, int subfeat_nr,
+			double value);
 
 /* Execute all set statements for this particular chip. The chip may contain
    wildcards!  This function will return 0 on success, and <0 on failure. */
 int sensors_do_chip_sets(const sensors_chip_name *name);
+int sensors_do_chip_sets_r(sensors_config* config, const sensors_chip_name *name);
 
 /* This function returns all detected chips that match a given chip name,
    one by one. If no chip name is provided, all detected chips are returned.
@@ -130,6 +145,9 @@ int sensors_do_chip_sets(const sensors_chip_name *name);
    they point to internal structures! */
 const sensors_chip_name *sensors_get_detected_chips(const sensors_chip_name
 						    *match, int *nr);
+const sensors_chip_name *sensors_get_detected_chips_r(sensors_config* config,
+						      const sensors_chip_name
+						      *match, int *nr);
 
 /* These defines are used in the flags field of sensors_subfeature */
 #define SENSORS_MODE_R			1
@@ -338,6 +356,8 @@ typedef struct sensors_subfeature {
    data structures. */
 const sensors_feature *
 sensors_get_features(const sensors_chip_name *name, int *nr);
+const sensors_feature *
+sensors_get_features_r(sensors_config *config, const sensors_chip_name *name, int *nr);
 
 /* This returns all subfeatures of a given main feature. nr is an internally
    used variable. Set it to zero to start at the begin of the list. If no
@@ -347,6 +367,10 @@ sensors_get_features(const sensors_chip_name *name, int *nr);
 const sensors_subfeature *
 sensors_get_all_subfeatures(const sensors_chip_name *name,
 			    const sensors_feature *feature, int *nr);
+const sensors_subfeature *
+sensors_get_all_subfeatures_r(sensors_config *config,
+			      const sensors_chip_name *name,
+			      const sensors_feature *feature, int *nr);
 
 /* This returns the subfeature of the given type for a given main feature,
    if it exists, NULL otherwise.
@@ -356,6 +380,11 @@ const sensors_subfeature *
 sensors_get_subfeature(const sensors_chip_name *name,
 		       const sensors_feature *feature,
 		       sensors_subfeature_type type);
+const sensors_subfeature *
+sensors_get_subfeature_r(sensors_config *config,
+			 const sensors_chip_name *name,
+			 const sensors_feature *feature,
+			 sensors_subfeature_type type);
 
 #ifdef __cplusplus
 }
