@@ -29,27 +29,21 @@
 #include "error.h"
 #include "scanner.h"
 
-static int buffer_count;
-static int buffer_max;
-static char *buffer;
-
-char sensors_lex_error[100];
-
-const char *sensors_yyfilename;
-int sensors_yylineno;
-
-#define buffer_malloc() sensors_malloc_array(&buffer,&buffer_count,\
-                                             &buffer_max,1)
-#define buffer_free() sensors_free_array(&buffer,&buffer_count,\
-                                         &buffer_max)
-#define buffer_add_char(c) sensors_add_array_el(c,&buffer,\
-                                                &buffer_count,\
-                                                &buffer_max,1)
+#define buffer_malloc() sensors_malloc_array(&yyextra->buffer,&yyextra->buffer_count,\
+                                             &yyextra->buffer_max,1)
+#define buffer_free() sensors_free_array(&yyextra->buffer,&yyextra->buffer_count,\
+                                         &yyextra->buffer_max)
+#define buffer_add_char(c) sensors_add_array_el(c,&yyextra->buffer,\
+                                                &yyextra->buffer_count,\
+                                                &yyextra->buffer_max,1)
 #define buffer_add_string(s) sensors_add_array_els(s,strlen(s),\
-                                                   &buffer, \
-                                                   &buffer_count,&buffer_max,1)
-
+                                                   &yyextra->buffer, \
+                                                   &yyextra->buffer_count,&yyextra->buffer_max,1)
+#define sensors_yytext yytext
 %}
+
+%option reentrant
+%option extra-type="extra *"
 
  /* Scanner for configuration files */
 
@@ -94,7 +88,7 @@ NUM	0|([1-9][[:digit:]]*)
 {BLANK}+	; /* eat as many blanks as possible at once */
 
 {BLANK}*\n	{ /* eat a bare newline (possibly preceded by blanks) */
-		  sensors_yylineno++;
+		  yyextra->lineno++;
 		}
 
  /* comments */
@@ -102,7 +96,7 @@ NUM	0|([1-9][[:digit:]]*)
 #.*		; /* eat the rest of the line after comment char */
 
 #.*\n		{ /* eat the rest of the line after comment char */
-		  sensors_yylineno++;
+		  yyextra->lineno++;
 		}
 
  /*
@@ -113,43 +107,43 @@ NUM	0|([1-9][[:digit:]]*)
   */
 
 label{BLANK}*	{
-		  sensors_yylval.line.filename = sensors_yyfilename;
-		  sensors_yylval.line.lineno = sensors_yylineno;
+		  sensors_yylval.line.filename = yyextra->filename;
+		  sensors_yylval.line.lineno = yyextra->lineno;
 		  BEGIN(MIDDLE);
 		  return LABEL;
 		}
 
 set{BLANK}*	{
-		  sensors_yylval.line.filename = sensors_yyfilename;
-		  sensors_yylval.line.lineno = sensors_yylineno;
+		  sensors_yylval.line.filename = yyextra->filename;
+		  sensors_yylval.line.lineno = yyextra->lineno;
 		  BEGIN(MIDDLE);
 		  return SET;
 		}
 
 compute{BLANK}*	{
-		  sensors_yylval.line.filename = sensors_yyfilename;
-		  sensors_yylval.line.lineno = sensors_yylineno;
+		  sensors_yylval.line.filename = yyextra->filename;
+		  sensors_yylval.line.lineno = yyextra->lineno;
 		  BEGIN(MIDDLE);
 		  return COMPUTE;
 		}
 
 bus{BLANK}*	{
-		  sensors_yylval.line.filename = sensors_yyfilename;
-		  sensors_yylval.line.lineno = sensors_yylineno;
+		  sensors_yylval.line.filename = yyextra->filename;
+		  sensors_yylval.line.lineno = yyextra->lineno;
 		  BEGIN(MIDDLE);
 		  return BUS;
 		}
 
 chip{BLANK}*	{
-		  sensors_yylval.line.filename = sensors_yyfilename;
-		  sensors_yylval.line.lineno = sensors_yylineno;
+		  sensors_yylval.line.filename = yyextra->filename;
+		  sensors_yylval.line.lineno = yyextra->lineno;
 		  BEGIN(MIDDLE);
 		  return CHIP;
 		}
 
 ignore{BLANK}*	{
-		  sensors_yylval.line.filename = sensors_yyfilename;
-		  sensors_yylval.line.lineno = sensors_yylineno;
+		  sensors_yylval.line.filename = yyextra->filename;
+		  sensors_yylval.line.lineno = yyextra->lineno;
 		  BEGIN(MIDDLE);
 		  return IGNORE;
 		}
@@ -159,7 +153,7 @@ ignore{BLANK}*	{
 [a-z]+		|
 .		{
 		  BEGIN(ERR);
-		  strcpy(sensors_lex_error,"Invalid keyword");
+		  yyextra->lex_error = "Invalid keyword";
 		  return ERROR;
 		}
 }
@@ -174,7 +168,7 @@ ignore{BLANK}*	{
 
 \n		{
 		  BEGIN(INITIAL);
-		  sensors_yylineno++;
+		  yyextra->lineno++;
 		  return EOL;
 		}
 }
@@ -189,7 +183,7 @@ ignore{BLANK}*	{
 
 \n		{ /* newline here sends EOL token to parser */
 		  BEGIN(INITIAL);
-		  sensors_yylineno++;
+		  yyextra->lineno++;
 		  return EOL;
 		}
 
@@ -199,7 +193,7 @@ ignore{BLANK}*	{
 		}
 
 \\{BLANK}*\n	{ /* eat an escaped newline with no state change */
-		  sensors_yylineno++;
+		  yyextra->lineno++;
 		}
 
  /* comments */
@@ -208,7 +202,7 @@ ignore{BLANK}*	{
 
 #.*\n		{ /* eat the rest of the line after comment char */
 		  BEGIN(INITIAL);
-		  sensors_yylineno++;
+		  yyextra->lineno++;
 		  return EOL;
 		}
 
@@ -271,8 +265,7 @@ ignore{BLANK}*	{
 \n		|
 \\\n		{
 		  buffer_add_char("\0");
-		  strcpy(sensors_lex_error,
-			"No matching double quote.");
+		  yyextra->lex_error = "No matching double quote.";
 		  buffer_free();
 		  yyless(0);
 		  BEGIN(ERR);
@@ -280,8 +273,7 @@ ignore{BLANK}*	{
 		}
 
 <<EOF>>		{
-		  strcpy(sensors_lex_error,
-			"Reached end-of-file without a matching double quote.");
+		  yyextra->lex_error = "Reached end-of-file without a matching double quote.";
 		  buffer_free();
 		  BEGIN(MIDDLE);
 		  return ERROR;
@@ -291,8 +283,7 @@ ignore{BLANK}*	{
 
 \"\"		{
 		  buffer_add_char("\0");
-		  strcpy(sensors_lex_error,
-			"Quoted strings must be separated by whitespace.");
+		  yyextra->lex_error = "Quoted strings must be separated by whitespace.";
 		  buffer_free();
 		  BEGIN(ERR);
 		  return ERROR;
@@ -300,7 +291,7 @@ ignore{BLANK}*	{
 
 \"		{
 		  buffer_add_char("\0");
-		  sensors_yylval.name = strdup(buffer);
+		  sensors_yylval.name = strdup(yyextra->buffer);
 		  if (! sensors_yylval.name)
 		    sensors_fatal_error("conf-lex.l",
                                         "Allocating a new string");
@@ -333,6 +324,12 @@ ignore{BLANK}*	{
 
 %%
 
+static void sensors_scanner_free_extra(struct yyguts_t*yyg)
+{
+	free(yyextra);
+	yyset_extra(NULL, yyg);
+}
+
 /*
 	Do the buffer handling manually.  This allows us to scan as many
 	config files as we need to, while cleaning up properly after each
@@ -342,24 +339,37 @@ ignore{BLANK}*	{
 	Returns 0 if successful, !0 otherwise.
 */
 
-static YY_BUFFER_STATE scan_buf = (YY_BUFFER_STATE)0;
-
-int sensors_scanner_init(FILE *input, const char *filename)
+int sensors_scanner_init(FILE *input, const char *filename, yyscan_t *p_yyscanner)
 {
-	BEGIN(0);
-	if (!(scan_buf = sensors_yy_create_buffer(input, YY_BUF_SIZE)))
+	struct yyguts_t *yyg;
+	extra *extra_data;
+	if (yylex_init(p_yyscanner))
 		return -1;
+	yyg = (struct yyguts_t*)*p_yyscanner;
+	extra_data = calloc(1, sizeof(extra));
+	if (!extra_data)
+		goto init_error;
+	yyset_extra(extra_data, yyg);
 
-	sensors_yy_switch_to_buffer(scan_buf);
-	sensors_yyfilename = filename;
-	sensors_yylineno = 1;
+	BEGIN(0);
+	if (!(yyextra->scan_buf = sensors_yy_create_buffer(input, YY_BUF_SIZE, yyg)))
+		goto init_error;
+
+	sensors_yy_switch_to_buffer(yyextra->scan_buf, yyg);
+	yyextra->filename = filename;
+	yyextra->lineno = 1;
 	return 0;
+init_error:
+	sensors_scanner_free_extra(yyg);
+	sensors_yylex_destroy(yyg);
+	return -1;
 }
 
-void sensors_scanner_exit(void)
+void sensors_scanner_exit(void *yyscanner)
 {
-	sensors_yy_delete_buffer(scan_buf);
-	scan_buf = (YY_BUFFER_STATE)0;
+	struct yyguts_t *yyg = (struct yyguts_t*)yyscanner;
+	sensors_yy_delete_buffer(yyextra->scan_buf, yyscanner);
+	sensors_scanner_free_extra(yyg);
 
 /* As of flex 2.5.9, yylex_destroy() must be called when done with the
    scaller, otherwise we'll leak memory. */
@@ -367,7 +377,7 @@ void sensors_scanner_exit(void)
 #if YY_FLEX_MAJOR_VERSION > 2 || \
     (YY_FLEX_MAJOR_VERSION == 2 && (YY_FLEX_MINOR_VERSION > 5 || \
 				    (YY_FLEX_MINOR_VERSION == 5 && YY_FLEX_SUBMINOR_VERSION >= 9)))
-	sensors_yylex_destroy();
+	sensors_yylex_destroy(yyscanner);
 #endif
 #endif
 }
