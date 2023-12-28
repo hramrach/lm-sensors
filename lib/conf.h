@@ -34,11 +34,13 @@ int lineno;
 YY_BUFFER_STATE scan_buf;
 } extra;
 
+typedef union YYSTYPE YYSTYPE;
+
 /* This is defined in conf-lex.l */
-int sensors_yylex(yyscan_t yyscanner);
+int sensors_yylex(YYSTYPE *yylval_param, yyscan_t yyscanner);
 
 /* This is defined in conf-parse.y */
-int sensors_yyparse(yyscan_t yyscanner);
+int sensors_yyparse(sensors_chip *current_chip, yyscan_t yyscanner);
 
 /* This is defined in strtod/strtod.c */
 double fmtstrtod(const char *as, const char **aas);

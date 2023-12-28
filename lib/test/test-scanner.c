@@ -38,7 +38,7 @@ int main(void)
 		return result;
 
 	do {
-		result = sensors_yylex(yyscanner);
+		result = sensors_yylex(&sensors_yylval, yyscanner);
 
 		printf("%d: ", sensors_yyget_extra(yyscanner)->lineno);
 

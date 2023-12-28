@@ -66,6 +66,7 @@ static int parse_config(FILE *input, const char *name)
 	int err;
 	char *name_copy;
 	yyscan_t yyscanner;
+	sensors_chip *current_chip = NULL;
 
 	if (name) {
 		/* Record configuration file name for error reporting */
@@ -80,7 +81,7 @@ static int parse_config(FILE *input, const char *name)
 		err = -SENSORS_ERR_PARSE;
 		goto exit_cleanup;
 	}
-	err = sensors_yyparse(yyscanner);
+	err = sensors_yyparse(current_chip, yyscanner);
 	sensors_scanner_exit(yyscanner);
 	if (err) {
 		err = -SENSORS_ERR_PARSE;

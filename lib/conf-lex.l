@@ -39,10 +39,11 @@
 #define buffer_add_string(s) sensors_add_array_els(s,strlen(s),\
                                                    &yyextra->buffer, \
                                                    &yyextra->buffer_count,&yyextra->buffer_max,1)
-#define sensors_yytext yytext
+#define sensors_yytext (yytext)
+#define sensors_yylval (*yylval)
 %}
 
-%option reentrant
+%option reentrant bison-bridge
 %option extra-type="extra *"
 
  /* Scanner for configuration files */

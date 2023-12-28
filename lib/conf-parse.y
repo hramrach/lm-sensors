@@ -32,11 +32,11 @@
 #include "access.h"
 #include "init.h"
 #include "conf-lex.h"
+#include "unused.h"
 
-static void sensors_yyerror(yyscan_t yyscanner, const char *err);
+static void sensors_yyerror(sensors_chip *current_chip, yyscan_t yyscanner,
+			    const char *err);
 static sensors_expr *malloc_expr(void);
-
-static sensors_chip *current_chip = NULL;
 
 #define bus_add_el(el) sensors_add_array_el(el,\
                                       &sensors_config_busses,\
@@ -77,6 +77,9 @@ static sensors_chip *current_chip = NULL;
 
 %}
 
+%define api.pure full
+
+%parse-param {sensors_chip *current_chip}
 %param {yyscan_t yyscanner}
 
 %union {
@@ -144,7 +147,7 @@ bus_statement:	  BUS bus_id adapter_name
 label_statement:	  LABEL function_name string
 			  { sensors_label new_el;
 			    if (!current_chip) {
-			      sensors_yyerror(yyscanner, "Label statement before first chip statement");
+			      sensors_yyerror(current_chip, yyscanner, "Label statement before first chip statement");
 			      free($2);
 			      free($3);
 			      YYERROR;
@@ -159,7 +162,7 @@ label_statement:	  LABEL function_name string
 set_statement:	  SET function_name expression
 		  { sensors_set new_el;
 		    if (!current_chip) {
-		      sensors_yyerror(yyscanner, "Set statement before first chip statement");
+		      sensors_yyerror(current_chip, yyscanner, "Set statement before first chip statement");
 		      free($2);
 		      sensors_free_expr($3);
 		      YYERROR;
@@ -174,7 +177,7 @@ set_statement:	  SET function_name expression
 compute_statement:	  COMPUTE function_name expression ',' expression
 			  { sensors_compute new_el;
 			    if (!current_chip) {
-			      sensors_yyerror(yyscanner, "Compute statement before first chip statement");
+			      sensors_yyerror(current_chip, yyscanner, "Compute statement before first chip statement");
 			      free($2);
 			      sensors_free_expr($3);
 			      sensors_free_expr($5);
@@ -191,7 +194,7 @@ compute_statement:	  COMPUTE function_name expression ',' expression
 ignore_statement:	IGNORE function_name
 			{ sensors_ignore new_el;
 			  if (!current_chip) {
-			    sensors_yyerror(yyscanner, "Ignore statement before first chip statement");
+			    sensors_yyerror(current_chip, yyscanner, "Ignore statement before first chip statement");
 			    free($2);
 			    YYERROR;
 			  }
@@ -302,7 +305,7 @@ bus_id:		  NAME
 		  { int res = sensors_parse_bus_id($1,&$$);
 		    free($1);
 		    if (res) {
-                      sensors_yyerror(yyscanner, "Parse error in bus id");
+                      sensors_yyerror(current_chip, yyscanner, "Parse error in bus id");
 		      YYERROR;
                     }
 		  }
@@ -324,7 +327,7 @@ chip_name:	  NAME
 		  { int res = sensors_parse_chip_name($1,&$$);
 		    free($1);
 		    if (res) {
-		      sensors_yyerror(yyscanner, "Parse error in chip name");
+		      sensors_yyerror(current_chip, yyscanner, "Parse error in chip name");
 		      YYERROR;
 		    }
 		  }
@@ -332,7 +335,8 @@ chip_name:	  NAME
 
 %%
 
-void sensors_yyerror(yyscan_t yyscanner, const char *err)
+void sensors_yyerror(sensors_chip *UNUSED(current_chip), yyscan_t yyscanner,
+		     const char *err)
 {
   extra *extra_data = sensors_yyget_extra(yyscanner);
   if (extra_data->lex_error) {
