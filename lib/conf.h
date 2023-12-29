@@ -31,4 +31,7 @@ extern FILE *sensors_yyin;
 /* This is defined in conf-parse.y */
 int sensors_yyparse(void);
 
+/* This is defined in strtod/strtod.c */
+double fmtstrtod(const char *as, const char **aas);
+
 #endif /* def LIB_SENSORS_CONF_H */

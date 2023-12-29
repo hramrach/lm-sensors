@@ -8,7 +8,9 @@ LIB_TEST_SCANNER_OBJS := \
 	$(LIB_TEST_DIR)/test-scanner.ro \
 	$(LIB_DIR)/conf-lex.ao \
 	$(LIB_DIR)/error.ao \
-	$(LIB_DIR)/general.ao
+	$(LIB_DIR)/general.ao \
+	$(LIB_DIR)/strtod/strtod.ao \
+	$(LIB_DIR)/strtod/nan64.ao
 
 # Include all dependency files. We use '.rd' to indicate this will create
 # executables.

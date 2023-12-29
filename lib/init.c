@@ -45,34 +45,6 @@
 #define ALT_CONFIG_FILE		ETCDIR "/sensors.conf"
 #define DEFAULT_CONFIG_DIR	ETCDIR "/sensors.d"
 
-/* Wrapper around sensors_yyparse(), which clears the locale so that
-   the decimal numbers are always parsed properly. */
-static int sensors_parse(void)
-{
-	int res;
-	char *locale;
-
-	/* Remember the current locale and clear it */
-	locale = setlocale(LC_ALL, NULL);
-	if (locale) {
-		locale = strdup(locale);
-		if (!locale)
-			sensors_fatal_error(__func__, "Out of memory");
-
-		setlocale(LC_ALL, "C");
-	}
-
-	res = sensors_yyparse();
-
-	/* Restore the old locale */
-	if (locale) {
-		setlocale(LC_ALL, locale);
-		free(locale);
-	}
-
-	return res;
-}
-
 static void free_bus(sensors_bus *bus)
 {
 	free(bus->adapter);
@@ -107,7 +79,7 @@ static int parse_config(FILE *input, const char *name)
 		err = -SENSORS_ERR_PARSE;
 		goto exit_cleanup;
 	}
-	err = sensors_parse();
+	err = sensors_yyparse();
 	sensors_scanner_exit();
 	if (err) {
 		err = -SENSORS_ERR_PARSE;

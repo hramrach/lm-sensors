@@ -24,6 +24,7 @@
 
 #include "general.h"
 #include "data.h"
+#include "conf.h"
 #include "conf-parse.h"
 #include "error.h"
 #include "scanner.h"
@@ -214,7 +215,7 @@ ignore{BLANK}*	{
  /* A number */
 
 {FLOAT}		{
-		  sensors_yylval.value = atof(sensors_yytext);
+		  sensors_yylval.value = fmtstrtod(sensors_yytext, NULL);
 		  return FLOAT;
 		}
 
