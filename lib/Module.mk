@@ -57,7 +57,9 @@ endif
 
 LIBCSOURCES := $(MODULE_DIR)/data.c $(MODULE_DIR)/general.c \
                $(MODULE_DIR)/error.c $(MODULE_DIR)/access.c \
-               $(MODULE_DIR)/init.c $(MODULE_DIR)/sysfs.c
+               $(MODULE_DIR)/init.c $(MODULE_DIR)/sysfs.c \
+               $(MODULE_DIR)/strtod/strtod.c \
+               $(MODULE_DIR)/strtod/nan64.c
 
 LIBOTHEROBJECTS := $(MODULE_DIR)/conf-parse.o $(MODULE_DIR)/conf-lex.o
 LIBSHOBJECTS := $(LIBCSOURCES:.c=.lo) $(LIBOTHEROBJECTS:.o=.lo)
@@ -162,7 +164,9 @@ endif
 
 clean-lib:
 	$(RM) $(LIB_DIR)/*.ld $(LIB_DIR)/*.ad
+	$(RM) $(LIB_DIR)/*/*.ld $(LIB_DIR)/*/*.ad
 	$(RM) $(LIB_DIR)/*.lo $(LIB_DIR)/*.ao
+	$(RM) $(LIB_DIR)/*/*.lo $(LIB_DIR)/*/*.ao
 	$(RM) $(LIBTARGETS) $(LIBEXTRACLEAN)
 # old versions
 	$(RM) $(LIB_DIR)/$(LIBSHBASENAME).*

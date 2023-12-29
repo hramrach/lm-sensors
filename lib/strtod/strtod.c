@@ -1,5 +1,5 @@
-#include <u.h>
-#include <libc.h>
+#include "u.h"
+#include "libc.h"
 #include <ctype.h>
 #include "fmtdef.h"
 
@@ -42,8 +42,8 @@ enum
 	Fdpoint	= 1<<2,		/* found . */
 };
 
-static	int	xcmp(char*, char*);
-static	int	fpcmp(char*, ulong*);
+static	int	xcmp(const char*, const char*);
+static	int	fpcmp(const char*, ulong*);
 static	void	frnorm(ulong*);
 static	void	divascii(char*, int*, int*, int*);
 static	void	mulascii(char*, int*, int*, int*);
@@ -53,9 +53,9 @@ static ulong	umuldiv(ulong, ulong, ulong);
 typedef	struct	Tab	Tab;
 struct	Tab
 {
-	int	bp;
-	int	siz;
-	char*	cmp;
+	const int	bp;
+	const int	siz;
+	const char *	cmp;
 };
 
 #ifndef ERANGE
@@ -63,12 +63,13 @@ struct	Tab
 #endif
 
 double
-fmtstrtod(const char *as, char **aas)
+fmtstrtod(const char *as, const char **aas)
 {
 	int na, ona, ex, dp, bp, c, i, flag, state;
 	ulong low[Prec], hig[Prec], mid[Prec], num, den;
 	double d;
-	char *s, a[Ndig];
+	const char *s;
+	char a[Ndig];
 
 	flag = 0;	/* Fsign, Fesign, Fdpoint */
 	na = 0;		/* number of digits of a[] */
@@ -76,7 +77,7 @@ fmtstrtod(const char *as, char **aas)
 	ex = 0;		/* exonent */
 
 	state = S0;
-	for(s=(char*)as;; s++) {
+	for(s=as;; s++) {
 		c = *s;
 		if(c >= '0' && c <= '9') {
 			switch(state) {
@@ -120,6 +121,7 @@ fmtstrtod(const char *as, char **aas)
 				flag |= Fsign;
 			else
 				flag |= Fesign;
+			/* fallthrough */
 		case '+':
 			if(state == S0)
 				state = S1;
@@ -162,6 +164,7 @@ fmtstrtod(const char *as, char **aas)
 				*aas = s+3;
 			goto retnan;
 		}
+		/* fallthrough */
 	case S1:
 		if(xcmp(s, "infinity") == 0) {
 			if(aas != nil)
@@ -173,12 +176,14 @@ fmtstrtod(const char *as, char **aas)
 				*aas = s+3;
 			goto retinf;
 		}
+		/* fallthrough */
 	case S3:
 		if(aas != nil)
-			*aas = (char*)as;
+			*aas = as;
 		goto ret0;	/* no digits found */
 	case S6:
 		s--;		/* back over +- */
+		/* fallthrough */
 	case S5:
 		s--;		/* back over e */
 		break;
@@ -335,7 +340,7 @@ frnorm(ulong *f)
 }
 
 static int
-fpcmp(char *a, ulong* f)
+fpcmp(const char *a, ulong* f)
 {
 	ulong tf[Prec];
 	int i, d, c;
@@ -427,25 +432,25 @@ divby(char *a, int *na, int b)
 		_divby(a, na, b);
 }
 
-static	Tab	tab1[] =
+static	const Tab	tab1[] =
 {
-	 1,  0, "",
-	 3,  1, "7",
-	 6,  2, "63",
-	 9,  3, "511",
-	13,  4, "8191",
-	16,  5, "65535",
-	19,  6, "524287",
-	23,  7, "8388607",
-	26,  8, "67108863",
-	27,  9, "134217727",
+	{ 1,  0, ""},
+	{ 3,  1, "7"},
+	{ 6,  2, "63"},
+	{ 9,  3, "511"},
+	{13,  4, "8191"},
+	{16,  5, "65535"},
+	{19,  6, "524287"},
+	{23,  7, "8388607"},
+	{26,  8, "67108863"},
+	{27,  9, "134217727"},
 };
 
 static void
 divascii(char *a, int *na, int *dp, int *bp)
 {
 	int b, d;
-	Tab *t;
+	const Tab *t;
 
 	d = *dp;
 	if(d >= (int)(nelem(tab1)))
@@ -460,7 +465,7 @@ divascii(char *a, int *na, int *dp, int *bp)
 }
 
 static void
-mulby(char *a, char *p, char *q, int b)
+mulby(const char *a, char *p, const char *q, int b)
 {
 	int n, c;
 
@@ -486,18 +491,18 @@ mulby(char *a, char *p, char *q, int b)
 	}
 }
 
-static	Tab	tab2[] =
+static	const Tab	tab2[] =
 {
-	 1,  1, "",				/* dp = 0-0 */
-	 3,  3, "125",
-	 6,  5, "15625",
-	 9,  7, "1953125",
-	13, 10, "1220703125",
-	16, 12, "152587890625",
-	19, 14, "19073486328125",
-	23, 17, "11920928955078125",
-	26, 19, "1490116119384765625",
-	27, 19, "7450580596923828125",		/* dp 8-9 */
+	{ 1,  1, ""},				/* dp = 0-0 */
+	{ 3,  3, "125"},
+	{ 6,  5, "15625"},
+	{ 9,  7, "1953125"},
+	{13, 10, "1220703125"},
+	{16, 12, "152587890625"},
+	{19, 14, "19073486328125"},
+	{23, 17, "11920928955078125"},
+	{26, 19, "1490116119384765625"},
+	{27, 19, "7450580596923828125"},	/* dp 8-9 */
 };
 
 static void
@@ -505,7 +510,7 @@ mulascii(char *a, int *na, int *dp, int *bp)
 {
 	char *p;
 	int d, b;
-	Tab *t;
+	const Tab *t;
 
 	d = -*dp;
 	if(d >= (int)(nelem(tab2)))
@@ -522,7 +527,7 @@ mulascii(char *a, int *na, int *dp, int *bp)
 }
 
 static int
-xcmp(char *a, char *b)
+xcmp(const char *a, const char *b)
 {
 	int c1, c2;
 

@@ -1,15 +1,15 @@
 /*
  * 64-bit IEEE not-a-number routines.
- * This is big/little-endian portable assuming that 
+ * This is big/little-endian portable assuming that
  * the 64-bit doubles and 64-bit integers have the
  * same byte ordering.
  */
 
-#include <u.h>
-#include <libc.h>
+#include "u.h"
+#include "libc.h"
 #include "fmtdef.h"
 
-#if defined (__APPLE__) || (__powerpc__)
+#if defined (__APPLE__) || defined(__powerpc__)
 #define _NEEDLL
 #endif
 
