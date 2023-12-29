@@ -281,6 +281,10 @@ manhtml:
 %.ao: %.c
 	$(CC) $(ARCPPFLAGS) $(ARCFLAGS) -c $< -o $@
 
+# .ai preprocessed file
+%.ai: %.c
+	$(CC) $(ARCPPFLAGS) $(ARCFLAGS) -E $< -o $@
+
 %.ad: %.c
 	$(CC) -M -MG $(ARCPPFLAGS) $(ARCFLAGS) $< | \
 	$(SED) -e 's@^\(.*\)\.o:@$*.ad $*.ao: Makefile '`dirname $*.ad`/Module.mk' @' > $@
@@ -289,6 +293,10 @@ manhtml:
 # .lo files are used for shared libraries
 %.lo: %.c
 	$(CC) $(LIBCPPFLAGS) $(LIBCFLAGS) -c $< -o $@
+
+# .li preprocessed file
+%.li: %.c
+	$(CC) $(LIBCPPFLAGS) $(LIBCFLAGS) -E $< -o $@
 
 %.ld: %.c
 	$(CC) -M -MG $(LIBCPPFLAGS) $(LIBCFLAGS) $< | \
