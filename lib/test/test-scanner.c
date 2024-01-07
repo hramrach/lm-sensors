@@ -23,6 +23,7 @@
 #include "../data.h"
 #include "../conf.h"
 #include "../conf-parse.h"
+#include "../conf-lex.h"
 #include "../scanner.h"
 
 YYSTYPE sensors_yylval;

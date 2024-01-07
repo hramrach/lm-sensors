@@ -65,7 +65,7 @@ LIBOTHEROBJECTS := $(MODULE_DIR)/conf-parse.o $(MODULE_DIR)/conf-lex.o
 LIBSHOBJECTS := $(LIBCSOURCES:.c=.lo) $(LIBOTHEROBJECTS:.o=.lo)
 LIBSTOBJECTS := $(LIBCSOURCES:.c=.ao) $(LIBOTHEROBJECTS:.o=.ao)
 LIBEXTRACLEAN := $(MODULE_DIR)/conf-parse.h $(MODULE_DIR)/conf-parse.c \
-                 $(MODULE_DIR)/conf-lex.c
+                 $(MODULE_DIR)/conf-lex.c $(MODULE_DIR)/conf-lex.h
 
 LIBHEADERFILES := $(MODULE_DIR)/error.h $(MODULE_DIR)/sensors.h
 
@@ -88,9 +88,11 @@ $(MODULE_DIR)/$(LIBSTLIBNAME): $(LIBSTOBJECTS)
 
 # Depencies for non-C sources
 $(MODULE_DIR)/conf-lex.c: Makefile $(MODULE_DIR)/Module.mk
-$(MODULE_DIR)/conf-parse.c: Makefile $(MODULE_DIR)/Module.mk
 $(MODULE_DIR)/conf-lex.ad: $(MODULE_DIR)/conf-parse.c
 $(MODULE_DIR)/conf-lex.ld: $(MODULE_DIR)/conf-parse.c
+$(MODULE_DIR)/conf-parse.c: Makefile $(MODULE_DIR)/Module.mk
+$(MODULE_DIR)/conf-parse.ad: $(MODULE_DIR)/conf-lex.c
+$(MODULE_DIR)/conf-parse.ld: $(MODULE_DIR)/conf-lex.c
 
 # Include all dependency files
 INCLUDEFILES += $(LIBSHOBJECTS:.lo=.ld) $(LIBSTOBJECTS:.ao=.ad)

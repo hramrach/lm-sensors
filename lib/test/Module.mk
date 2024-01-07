@@ -23,6 +23,7 @@ all-lib-test: $(LIB_TEST_TARGETS)
 user :: all-lib-test
 
 $(LIB_TEST_DIR)/test-scanner.rd: $(LIB_DIR)/conf-parse.c
+$(LIB_TEST_DIR)/test-scanner.rd: $(LIB_DIR)/conf-lex.c
 
 clean-lib-test:
 	$(RM) $(LIB_TEST_DIR)/*.rd $(LIB_TEST_DIR)/*.ro

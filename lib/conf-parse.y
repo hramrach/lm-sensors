@@ -31,6 +31,7 @@
 #include "conf.h"
 #include "access.h"
 #include "init.h"
+#include "conf-lex.h"
 
 static void sensors_yyerror(const char *err);
 static sensors_expr *malloc_expr(void);
