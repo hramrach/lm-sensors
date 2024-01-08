@@ -25,6 +25,12 @@
 #include <stdio.h>
 #include <limits.h>
 
+#ifdef __GNUC__
+#define SENSORS_DEPRECATED(X) X __attribute__((deprecated ("Please use the reentrant interface")))
+#else
+#define SENSORS_DEPRECATED(X) X
+#endif
+
 /* Publicly accessible library functions */
 
 /* libsensors API version define, first digit is the major version (changed
@@ -76,12 +82,12 @@ typedef struct sensors_config sensors_config;
    assume anything will be initialized properly. If you want to
    reload the configuration file, call sensors_cleanup() below before
    calling sensors_init() again. */
-int sensors_init(FILE *input);
+SENSORS_DEPRECATED(int sensors_init(FILE *input));
 sensors_config *sensors_init_r(FILE *input, int *err);
 
 /* Clean-up function: You can't access anything after
    this, until the next sensors_init() call! */
-void sensors_cleanup(void);
+SENSORS_DEPRECATED(void sensors_cleanup(void));
 void sensors_cleanup_r(sensors_config *config);
 
 /* Parse a chip name to the internal representation. Return 0 on success, <0
@@ -100,7 +106,7 @@ int sensors_snprintf_chip_name(char *str, size_t size,
 /* This function returns the adapter name of a bus,
    as used within the sensors_chip_name structure. If it could not be found,
    it returns NULL */
-const char *sensors_get_adapter_name(const sensors_bus_id *bus);
+SENSORS_DEPRECATED(const char *sensors_get_adapter_name(const sensors_bus_id *bus));
 const char *sensors_get_adapter_name_r(sensors_config* config, const sensors_bus_id *bus);
 
 typedef struct sensors_feature sensors_feature;
@@ -109,8 +115,7 @@ typedef struct sensors_feature sensors_feature;
    contain wildcard values! The returned string is newly allocated (free it
    yourself). On failure, NULL is returned.
    If no label exists for this feature, its name is returned itself. */
-char *sensors_get_label(const sensors_chip_name *name,
-			const sensors_feature *feature);
+SENSORS_DEPRECATED(char *sensors_get_label(const sensors_chip_name *name, const sensors_feature *feature));
 char *sensors_get_label_r(sensors_config* config,
 			  const sensors_chip_name *name,
 			  const sensors_feature *feature);
@@ -118,8 +123,7 @@ char *sensors_get_label_r(sensors_config* config,
 /* Read the value of a subfeature of a certain chip. Note that chip should not
    contain wildcard values! This function will return 0 on success, and <0
    on failure.  */
-int sensors_get_value(const sensors_chip_name *name, int subfeat_nr,
-		      double *value);
+SENSORS_DEPRECATED(int sensors_get_value(const sensors_chip_name *name, int subfeat_nr, double *value));
 int sensors_get_value_r(sensors_config* config,
 			const sensors_chip_name *name, int subfeat_nr,
 			double *value);
@@ -127,15 +131,14 @@ int sensors_get_value_r(sensors_config* config,
 /* Set the value of a subfeature of a certain chip. Note that chip should not
    contain wildcard values! This function will return 0 on success, and <0
    on failure. */
-int sensors_set_value(const sensors_chip_name *name, int subfeat_nr,
-		      double value);
+SENSORS_DEPRECATED(int sensors_set_value(const sensors_chip_name *name, int subfeat_nr, double value));
 int sensors_set_value_r(sensors_config* config,
 			const sensors_chip_name *name, int subfeat_nr,
 			double value);
 
 /* Execute all set statements for this particular chip. The chip may contain
    wildcards!  This function will return 0 on success, and <0 on failure. */
-int sensors_do_chip_sets(const sensors_chip_name *name);
+SENSORS_DEPRECATED(int sensors_do_chip_sets(const sensors_chip_name *name));
 int sensors_do_chip_sets_r(sensors_config* config, const sensors_chip_name *name);
 
 /* This function returns all detected chips that match a given chip name,
@@ -143,8 +146,7 @@ int sensors_do_chip_sets_r(sensors_config* config, const sensors_chip_name *name
    To start at the beginning of the list, use 0 for nr; NULL is returned if
    we are at the end of the list. Do not try to change these chip names, as
    they point to internal structures! */
-const sensors_chip_name *sensors_get_detected_chips(const sensors_chip_name
-						    *match, int *nr);
+SENSORS_DEPRECATED(const sensors_chip_name *sensors_get_detected_chips(const sensors_chip_name *match, int *nr));
 const sensors_chip_name *sensors_get_detected_chips_r(sensors_config* config,
 						      const sensors_chip_name
 						      *match, int *nr);
@@ -354,8 +356,7 @@ typedef struct sensors_subfeature {
    more features are found NULL is returned.
    Do not try to change the returned structure; you will corrupt internal
    data structures. */
-const sensors_feature *
-sensors_get_features(const sensors_chip_name *name, int *nr);
+SENSORS_DEPRECATED(const sensors_feature * sensors_get_features(const sensors_chip_name *name, int *nr));
 const sensors_feature *
 sensors_get_features_r(sensors_config *config, const sensors_chip_name *name, int *nr);
 
@@ -364,9 +365,8 @@ sensors_get_features_r(sensors_config *config, const sensors_chip_name *name, in
    more features are found NULL is returned.
    Do not try to change the returned structure; you will corrupt internal
    data structures. */
-const sensors_subfeature *
-sensors_get_all_subfeatures(const sensors_chip_name *name,
-			    const sensors_feature *feature, int *nr);
+SENSORS_DEPRECATED(const sensors_subfeature * sensors_get_all_subfeatures(const sensors_chip_name *name,
+			    const sensors_feature *feature, int *nr));
 const sensors_subfeature *
 sensors_get_all_subfeatures_r(sensors_config *config,
 			      const sensors_chip_name *name,
@@ -376,10 +376,9 @@ sensors_get_all_subfeatures_r(sensors_config *config,
    if it exists, NULL otherwise.
    Do not try to change the returned structure; you will corrupt internal
    data structures. */
-const sensors_subfeature *
-sensors_get_subfeature(const sensors_chip_name *name,
+SENSORS_DEPRECATED(const sensors_subfeature * sensors_get_subfeature(const sensors_chip_name *name,
 		       const sensors_feature *feature,
-		       sensors_subfeature_type type);
+		       sensors_subfeature_type type));
 const sensors_subfeature *
 sensors_get_subfeature_r(sensors_config *config,
 			 const sensors_chip_name *name,
