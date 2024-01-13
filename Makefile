@@ -150,7 +150,7 @@ ifeq ($(DEBUG),1)
 ALL_CPPFLAGS += -DDEBUG
 ALL_CFLAGS += -O -g
 else
-ALL_CFLAGS += -O2 -g
+ALL_CFLAGS += -O2
 endif
 
 ifeq ($(WARN),1)
