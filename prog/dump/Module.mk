@@ -43,10 +43,10 @@ all-prog-dump: $(PROGDUMPTARGETS)
 user :: all-prog-dump
 
 $(MODULE_DIR)/isadump: $(MODULE_DIR)/isadump.ro $(MODULE_DIR)/superio.ro $(MODULE_DIR)/util.ro
-	$(CC) $(EXLDFLAGS) -o $@ $^
+	$(CC) -o $@ $^ $(EXLDFLAGS)
 
 $(MODULE_DIR)/isaset: $(MODULE_DIR)/isaset.ro $(MODULE_DIR)/util.ro
-	$(CC) $(EXLDFLAGS) -o $@ $^
+	$(CC) -o $@ $^ $(EXLDFLAGS)
 
 install-prog-dump: all-prog-dump
 	$(MKDIR) $(DESTDIR)$(SBINDIR) $(DESTDIR)$(PROGDUMPMAN8DIR)

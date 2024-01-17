@@ -69,7 +69,7 @@ LIBHEADERFILES := $(MODULE_DIR)/error.h $(MODULE_DIR)/sensors.h
 
 # How to create the shared library
 $(MODULE_DIR)/$(LIBSHLIBNAME): $(LIBSHOBJECTS) $(LIB_DIR)/libsensors.map
-	$(CC) -shared $(ALL_LDFLAGS) -Wl,--version-script=$(LIB_DIR)/libsensors.map -Wl,-soname,$(LIBSHSONAME) -o $@ $(LIBSHOBJECTS) -lc -lm
+	$(CC) -shared -Wl,--version-script=$(LIB_DIR)/libsensors.map -Wl,-soname,$(LIBSHSONAME) -o $@ $(LIBSHOBJECTS) $(ALL_LDFLAGS) -lc -lm
 
 $(MODULE_DIR)/$(LIBSHSONAME): $(MODULE_DIR)/$(LIBSHLIBNAME)
 	$(RM) $@

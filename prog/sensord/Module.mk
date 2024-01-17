@@ -42,7 +42,7 @@ REMOVESENSORDBIN := $(patsubst $(MODULE_DIR)/%,$(DESTDIR)$(SBINDIR)/%,$(PROGSENS
 REMOVESENSORDMAN := $(patsubst $(MODULE_DIR)/%,$(DESTDIR)$(PROGSENSORDMAN8DIR)/%,$(PROGSENSORDMAN8FILES))
 
 $(PROGSENSORDTARGETS): $(PROGSENSORDSOURCES:.c=.ro) lib/$(LIBDEP_FOR_PROGS)
-	$(CC) $(EXLDFLAGS) -o $@ $(PROGSENSORDSOURCES:.c=.ro) -Llib -lsensors -lrrd
+	$(CC) -o $@ $(PROGSENSORDSOURCES:.c=.ro) $(EXLDFLAGS) -Llib -lsensors -lrrd
 
 all-prog-sensord: $(PROGSENSORDTARGETS)
 user :: all-prog-sensord

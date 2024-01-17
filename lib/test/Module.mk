@@ -15,7 +15,7 @@ LIB_TEST_SCANNER_OBJS := \
 INCLUDEFILES += $(LIB_TEST_SOURCES:.c=.rd)
 
 $(LIB_TEST_DIR)/test-scanner: $(LIB_TEST_SCANNER_OBJS)
-	$(CC) $(EXLDFLAGS) -o $@ $(LIB_TEST_SCANNER_OBJS) -Llib
+	$(CC) -o $@ $(LIB_TEST_SCANNER_OBJS) -Llib $(EXLDFLAGS)
 
 all-lib-test: $(LIB_TEST_TARGETS)
 user :: all-lib-test

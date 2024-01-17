@@ -42,7 +42,7 @@ REMOVESENSORSZSH := $(patsubst $(MODULE_DIR)/%,$(DESTDIR)$(ZSHCOMPDIR)/%,$(PROGS
 LIBICONV := $(shell if /sbin/ldconfig -p | grep -q '/libiconv\.so$$' ; then echo \-liconv; else echo; fi)
 
 $(PROGSENSORSTARGETS): $(PROGSENSORSSOURCES:.c=.ro) lib/$(LIBDEP_FOR_PROGS)
-	$(CC) $(EXLDFLAGS) -o $@ $(PROGSENSORSSOURCES:.c=.ro) $(LIBICONV) -Llib -lsensors -lm
+	$(CC) -o $@ $(PROGSENSORSSOURCES:.c=.ro) $(LIBICONV) $(EXLDFLAGS) -Llib -lsensors -lm
 
 all-prog-sensors: $(PROGSENSORSTARGETS)
 user :: all-prog-sensors
