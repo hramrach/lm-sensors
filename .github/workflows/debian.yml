@@ -1,29 +1,64 @@
 name: 🍥GitHub Action Debian
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
-on: [push]
+run-name: ${{ github.event_name }} GitHub Action triggered by ${{ github.actor }} 🎬
+on: [pull_request]
 jobs:
   Run-Tests:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - name: Check out repository code
-        uses: actions/checkout@v4
-      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-      - run: echo "🖥️ The workflow is now ready to test your code on the runner."
-      - name: 🧐 List files in the repository
-        run: |
-          cd ${{ github.workspace }}
-          ls
+      - name: 📨 Check out repository code
+        uses: actions/checkout@v6
+        with:
+          path: current
+      - name: 🏚︎ Check out the base branch
+        uses: actions/checkout@v6
+        with:
+          path: base
+          ref: ${{ github.base_ref }}
+      - name: ≣⃛ checkout lcov
+        uses: actions/checkout@v6
+        with:
+          path: lcov
+          ref: v2.0
+          repository: linux-test-project/lcov
       - name: 🧰 Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install libtest-cmd-perl
-      - name: 🏗️ Build the stuff
+          sudo apt-get install libtest-cmd-perl librrd-dev valgrind sed \
+            libcapture-tiny-perl libdatetime-perl libdevel-cover-perl libdigest-md5-perl libfile-spec-perl libjson-xs-perl libmodule-load-conditional-perl libscalar-list-utils-perl libtime-hires-perl
+      - name: 🏗️ Build code
         run: |
-          make
+          cd ${{ github.workspace }}/lcov
+          make PREFIX=${{ github.workspace }}/lcov-install install
+          for dir in base current ; do
+          cd ${{ github.workspace }}/$dir
+          sed -i -e s/[.]ao\\\>/.lo/g lib/test/Module.mk # Need only one kind of object in all binaries for gcov
+          CFLAGS="-fprofile-arcs -ftest-coverage" LDFLAGS=-lgcov make PROG_EXTRA=sensord BUILD_STATIC_LIB=0
+          done
       - name: 🧫 Run tests
         run: |
+          for dir in base current ; do
+          cd ${{ github.workspace }}/$dir
+          ${{ github.workspace }}/lcov-install/bin/lcov --capture --initial --branch-coverage --base $(pwd) --no-external --directory . --output-file coverage0.info
           make check
-      - run: echo "🍏 This job's status is ${{ job.status }}."
+          done
+      - name: 🌨️ Calculate coverage
+        run: |
+          for dir in base current ; do
+          cd ${{ github.workspace }}/$dir
+          ${{ github.workspace }}/lcov-install/bin/lcov --capture --branch-coverage --base $(pwd) --no-external --directory . --output-file coverage1.info
+          ${{ github.workspace }}/lcov-install/bin/lcov --branch-coverage --substitute 's#'$dir'/##g' --add-tracefile coverage0.info --add-tracefile coverage1.info --output-file coverage.info
+          ${{ github.workspace }}/lcov-install/bin/lcov --list coverage.info
+          cp ${{ github.workspace }}/$dir/coverage.info ${{ github.workspace }}/coverage-$dir.info
+          done
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          cp ${{ github.event_path }} ${{ github.workspace }}/event
+          cat ${{ github.workspace }}/event
+
+      - name: ⏫ Upload coverage data
+        uses: actions/upload-artifact@v7
+        with:
+          name: Coverage report
+          path: |
+            ${{ github.workspace }}/coverage-current.info
+            ${{ github.workspace }}/coverage-base.info
+            ${{ github.workspace }}/event

@@ -1,0 +1,43 @@
+name: 🏔️ Display coverage data
+
+on:
+  workflow_run:
+    workflows: [🍥GitHub Action Debian]
+    types: [completed]
+
+jobs:
+  Display-Coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⏬ Download artifact
+        uses: actions/github-script@v9
+        with:
+          github-token: ${{ secrets.TOKEN }}
+          script: |
+            let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.payload.workflow_run.id,
+            });
+            let matchArtifact = allArtifacts.data.artifacts.filter((artifact) => {
+              return artifact.name == "Coverage report"
+              })[0];
+            let download = await github.rest.actions.downloadArtifact({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              artifact_id: matchArtifact.id,
+              archive_format: 'zip',
+              });
+            let fs = require('fs');
+            fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/coverage-report.zip`, Buffer.from(download.data));
+      - name: 🏺 Unzip artifact
+        run: unzip coverage-report.zip -d lcov
+      - name: 🏔️ Generate coverage report
+        uses: hramrach/lcov-reporter-action@master
+        with:
+          github-token: ${{ secrets.TOKEN }}
+          lcov-file: "lcov/coverage-current.info"
+          lcov-base: "lcov/coverage-base.info"
+          event: "lcov/event"
+          delete-old-comments: true
+          update-comment: true
