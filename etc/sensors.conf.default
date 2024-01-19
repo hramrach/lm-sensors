@@ -323,7 +323,7 @@ chip "nct6106-isa-*"
 
 
 chip "w83627ehf-*" "w83627dhg-*" "w83667hg-*" "nct6775-*" "nct6776-*" \
-     "nct6779-*" "nct6791-*" "nct6795-*" "nct6796-*"
+     "nct6779-*" "nct6791-*" "nct6795-*" "nct6796-*" "nct6799-*"
 
     label in0 "Vcore"
     label in2 "AVCC"
