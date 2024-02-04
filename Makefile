@@ -209,8 +209,8 @@ test-lib:: lib/test/test-scanner
 	cd lib/test ; ./test-scanner.pl
 
 test-sensors:: prog/sensors/sensors
-	LD_LIBRARY_PATH=lib SENSORS_SYSFS_ROOT=prog/sensors/test/data/laptop prog/sensors/sensors -J | jq -S | diff -u prog/sensors/test/data/laptop.json -
-	LD_LIBRARY_PATH=lib SENSORS_SYSFS_ROOT=prog/sensors/test/data/laptop prog/sensors/sensors -J -f | jq -S | diff -u prog/sensors/test/data/laptop.f.json -
+	LD_LIBRARY_PATH=lib SENSORS_SYSFS_ROOT=prog/sensors/test/data/laptop prog/sensors/sensors -c /dev/null -J | jq -S | diff -u prog/sensors/test/data/laptop.json -
+	LD_LIBRARY_PATH=lib SENSORS_SYSFS_ROOT=prog/sensors/test/data/laptop prog/sensors/sensors -c /dev/null -J -f | jq -S | diff -u prog/sensors/test/data/laptop.f.json -
 
 user ::
 user_install::
