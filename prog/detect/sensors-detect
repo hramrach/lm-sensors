@@ -3351,7 +3351,9 @@ sub load_module
 # udev may take some time to create device nodes when loading modules
 sub udev_settle
 {
-	if (!(-x "/sbin/udevadm" && system("/sbin/udevadm settle") == 0)
+	if (!(-x "/usr/bin/udevadm" && system("/usr/bin/udevadm settle") == 0)
+	 && !(-x "/bin/udevadm" && system("/bin/udevadm settle") == 0)
+	 && !(-x "/sbin/udevadm" && system("/sbin/udevadm settle") == 0)
 	 && !(-x "/sbin/udevsettle" && system("/sbin/udevsettle") == 0)) {
 		sleep(1);
 	}
