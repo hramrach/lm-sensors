@@ -3,13 +3,21 @@
 fancontrol \- automated software based fan speed regulation
 
 .SH SYNOPSIS
-.B fancontrol
-.I [configfile]
+.B fancontrol [
+.I --check
+.B ] [
+.I configfile
+.B ]
 
 .SH DESCRIPTION
 \fBfancontrol\fP is a shell script for use with lm_sensors. It reads its
 configuration from a file, then calculates fan speeds from temperatures and
 sets the corresponding PWM outputs to the computed values.
+
+.SH OPTIONS
+.IP "--check"
+Check configuration file end exit. This option can be used for verifying the
+configuration before starting fancontrol as a service in the background.
 
 .SH WARNING
 Please be careful when using the fan control features of your mainboard, in

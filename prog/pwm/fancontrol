@@ -390,15 +390,11 @@ function CheckFiles
 	return $outdated
 }
 
+CHECK_ONLY=false
 if [ "$1" == "--check" ]
 then
-	if [ -f "$2" ]
-	then
-		LoadConfig $2
-	else
-		LoadConfig /etc/fancontrol
-	fi
-	exit 0
+	CHECK_ONLY=true
+	shift
 fi
 
 if [ -f "$1" ]
@@ -406,6 +402,10 @@ then
 	LoadConfig $1
 else
 	LoadConfig /etc/fancontrol
+fi
+
+if $CHECK_ONLY ; then
+	exit 0
 fi
 
 # Detect path to sensors
