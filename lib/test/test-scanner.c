@@ -23,22 +23,24 @@
 #include "../data.h"
 #include "../conf.h"
 #include "../conf-parse.h"
+#include "../conf-lex.h"
 #include "../scanner.h"
 
 YYSTYPE sensors_yylval;
+yyscan_t yyscanner;
 
 int main(void)
 {
 	int result;
 
 	/* init the scanner */
-	if ((result = sensors_scanner_init(stdin, NULL)))
+	if ((result = sensors_scanner_init(stdin, NULL, &yyscanner)))
 		return result;
 
 	do {
-		result = sensors_yylex();
+		result = sensors_yylex(&sensors_yylval, yyscanner);
 
-		printf("%d: ", sensors_yylineno);
+		printf("%d: ", sensors_yyget_extra(yyscanner)->lineno);
 
 		switch (result) {
 
@@ -99,7 +101,7 @@ int main(void)
 	} while (result);
 
 	/* clean up the scanner */
-	sensors_scanner_exit();
+	sensors_scanner_exit(yyscanner);
 
 	return 0;
 }

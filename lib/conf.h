@@ -21,14 +21,28 @@
 #ifndef LIB_SENSORS_CONF_H
 #define LIB_SENSORS_CONF_H
 
+typedef void *yyscan_t;
+typedef struct yy_buffer_state *YY_BUFFER_STATE;
+
+typedef struct extra {
+int buffer_count;
+int buffer_max;
+char *buffer;
+const char *lex_error;
+const char *filename;
+int lineno;
+YY_BUFFER_STATE scan_buf;
+} extra;
+
+typedef union YYSTYPE YYSTYPE;
+
 /* This is defined in conf-lex.l */
-int sensors_yylex(void);
-extern char sensors_lex_error[];
-extern const char *sensors_yyfilename;
-extern int sensors_yylineno;
-extern FILE *sensors_yyin;
+int sensors_yylex(YYSTYPE *yylval_param, yyscan_t yyscanner);
 
 /* This is defined in conf-parse.y */
-int sensors_yyparse(void);
+int sensors_yyparse(sensors_config *config, sensors_chip *current_chip, yyscan_t yyscanner);
+
+/* This is defined in strtod/strtod.c */
+double fmtstrtod(const char *as, const char **aas);
 
 #endif /* def LIB_SENSORS_CONF_H */

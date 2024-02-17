@@ -153,7 +153,7 @@ static int _applyToFeatures(FeatureFN fn, void *data,
 		feature = features + i;
 		rawLabel = feature->feature->name;
 
-		label = sensors_get_label(chip, feature->feature);
+		label = sensors_get_label_r(config, chip, feature->feature);
 		if (!label) {
 			sensorLog(LOG_ERR, "Error getting sensor label: %s/%s",
 				  chip->prefix, rawLabel);
@@ -193,8 +193,9 @@ static int applyToFeatures(FeatureFN fn, void *data)
 	for (i = 0; i < sensord_args.numChipNames; i++) {
 		chip_arg = &sensord_args.chipNames[i];
 		i_detected = 0;
-		while ((chip = sensors_get_detected_chips(chip_arg,
-							  &i_detected))) {
+		while ((chip = sensors_get_detected_chips_r(config,
+							    chip_arg,
+							    &i_detected))) {
 			desc = lookup_known_chips(chip);
 			if (!desc)
 				continue;

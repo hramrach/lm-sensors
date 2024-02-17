@@ -56,7 +56,7 @@ static int idChip(const sensors_chip_name *chip)
 	if (!sensord_args.logOneline)
 		sensorLog(LOG_INFO, "Chip: %s", name);
 
-	adapter = sensors_get_adapter_name(&chip->bus);
+	adapter = sensors_get_adapter_name_r(config, &chip->bus);
 	if (!adapter)
 		sensorLog(LOG_INFO, "Error getting adapter name");
 	else
@@ -74,7 +74,7 @@ static int get_flag(const sensors_chip_name *chip, int num)
 	if (num == -1)
 		return 0;
 
-	ret = sensors_get_value(chip, num, &val);
+	ret = sensors_get_value_r(config, chip, num, &val);
 	if (ret) {
 		sensorLog(LOG_ERR, "Error getting sensor data: %s/#%d: %s",
 			  chip->prefix, num, sensors_strerror(ret));
@@ -100,7 +100,7 @@ static int do_features(const sensors_chip_name *chip,
 		return 0;
 
 	for (i = 0; feature->dataNumbers[i] >= 0; i++) {
-		ret = sensors_get_value(chip, feature->dataNumbers[i],
+		ret = sensors_get_value_r(config, chip, feature->dataNumbers[i],
 					val + i);
 		if (ret) {
 			sensorLog(LOG_ERR,
@@ -137,7 +137,7 @@ static int do_features(const sensors_chip_name *chip,
 	/* FIXME: It would be more efficient to store the label at
 	 * initialization time.
 	 */
-	label = sensors_get_label(chip, feature->feature);
+	label = sensors_get_label_r(config, chip, feature->feature);
 	if (!label) {
 		sensorLog(LOG_ERR, "Error getting sensor label: %s/%s",
 			  chip->prefix, feature->feature->name);
@@ -148,7 +148,7 @@ static int do_features(const sensors_chip_name *chip,
 		if (sensord_args.logOneline)
 			sensorLog(LOG_INFO, "Chip: %s Adapter: %s  %s: %s",
 				  chipName(chip),
-				  sensors_get_adapter_name(&chip->bus),
+				  sensors_get_adapter_name_r(config, &chip->bus),
 				  label, formatted);
 		else
 			sensorLog(LOG_INFO, "  %s: %s", label, formatted);
@@ -188,7 +188,7 @@ static int setChip(const sensors_chip_name *chip)
 	if ((ret = idChip(chip))) {
 		sensorLog(LOG_ERR, "Error identifying chip: %s",
 			  chip->prefix);
-	} else if ((ret = sensors_do_chip_sets(chip))) {
+	} else if ((ret = sensors_do_chip_sets_r(config, chip))) {
 		sensorLog(LOG_ERR, "Error performing chip sets: %s: %s",
 			  chip->prefix, sensors_strerror(ret));
 		ret = 50;
@@ -234,7 +234,7 @@ static int doChips(int action)
 	for (j = 0; j < sensord_args.numChipNames; j++) {
 		chip_arg = &sensord_args.chipNames[j];
 		i = 0;
-		while ((chip = sensors_get_detected_chips(chip_arg, &i))) {
+		while ((chip = sensors_get_detected_chips_r(config, chip_arg, &i))) {
 			ret = doChip(chip, action);
 			if (ret)
 				return ret;

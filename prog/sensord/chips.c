@@ -141,14 +141,14 @@ static void fillChipVoltage(FeatureDescriptor *voltage,
 	voltage->rrd = rrdF2;
 	voltage->type = DataType_voltage;
 
-	sf = sensors_get_subfeature(name, feature,
+	sf = sensors_get_subfeature_r(config, name, feature,
 				    SENSORS_SUBFEATURE_IN_INPUT);
 	if (sf)
 		voltage->dataNumbers[pos++] = sf->number;
 
-	sfmin = sensors_get_subfeature(name, feature,
+	sfmin = sensors_get_subfeature_r(config, name, feature,
 				       SENSORS_SUBFEATURE_IN_MIN);
-	sfmax = sensors_get_subfeature(name, feature,
+	sfmax = sensors_get_subfeature_r(config, name, feature,
 				       SENSORS_SUBFEATURE_IN_MAX);
 	if (sfmin && sfmax) {
 		voltage->format = fmtVolts_2;
@@ -162,18 +162,18 @@ static void fillChipVoltage(FeatureDescriptor *voltage,
 	voltage->dataNumbers[pos] = -1;
 
 	/* alarm if applicable */
-	if ((sf = sensors_get_subfeature(name, feature,
+	if ((sf = sensors_get_subfeature_r(config, name, feature,
 					 SENSORS_SUBFEATURE_IN_ALARM)) ||
-	    (sf = sensors_get_subfeature(name, feature,
+	    (sf = sensors_get_subfeature_r(config, name, feature,
 					 SENSORS_SUBFEATURE_IN_MIN_ALARM)) ||
-	    (sf = sensors_get_subfeature(name, feature,
+	    (sf = sensors_get_subfeature_r(config, name, feature,
 					 SENSORS_SUBFEATURE_IN_MAX_ALARM))) {
 		voltage->alarmNumber = sf->number;
 	} else {
 		voltage->alarmNumber = -1;
 	}
 	/* beep if applicable */
-	if ((sf = sensors_get_subfeature(name, feature,
+	if ((sf = sensors_get_subfeature_r(config, name, feature,
 					 SENSORS_SUBFEATURE_IN_BEEP))) {
 		voltage->beepNumber = sf->number;
 	} else {
@@ -191,16 +191,16 @@ static void fillChipTemperature(FeatureDescriptor *temperature,
 	temperature->rrd = rrdF1;
 	temperature->type = DataType_temperature;
 
-	sf = sensors_get_subfeature(name, feature,
+	sf = sensors_get_subfeature_r(config, name, feature,
 				    SENSORS_SUBFEATURE_TEMP_INPUT);
 	if (sf)
 		temperature->dataNumbers[pos++] = sf->number;
 
-	sfmin = sensors_get_subfeature(name, feature,
+	sfmin = sensors_get_subfeature_r(config, name, feature,
 				       SENSORS_SUBFEATURE_TEMP_MIN);
-	sfmax = sensors_get_subfeature(name, feature,
+	sfmax = sensors_get_subfeature_r(config, name, feature,
 				       SENSORS_SUBFEATURE_TEMP_MAX);
-	sfhyst = sensors_get_subfeature(name, feature,
+	sfhyst = sensors_get_subfeature_r(config, name, feature,
 					SENSORS_SUBFEATURE_TEMP_MAX_HYST);
 	if (sfmin && sfmax) {
 		temperature->format = fmtTemps_minmax_1;
@@ -218,18 +218,18 @@ static void fillChipTemperature(FeatureDescriptor *temperature,
 	temperature->dataNumbers[pos] = -1;
 
 	/* alarm if applicable */
-	if ((sf = sensors_get_subfeature(name, feature,
+	if ((sf = sensors_get_subfeature_r(config, name, feature,
 					 SENSORS_SUBFEATURE_TEMP_ALARM)) ||
-	    (sf = sensors_get_subfeature(name, feature,
+	    (sf = sensors_get_subfeature_r(config, name, feature,
 					 SENSORS_SUBFEATURE_TEMP_MAX_ALARM)) ||
-	    (sf = sensors_get_subfeature(name, feature,
+	    (sf = sensors_get_subfeature_r(config, name, feature,
 					 SENSORS_SUBFEATURE_TEMP_EMERGENCY_ALARM))) {
 		temperature->alarmNumber = sf->number;
 	} else {
 		temperature->alarmNumber = -1;
 	}
 	/* beep if applicable */
-	if ((sf = sensors_get_subfeature(name, feature,
+	if ((sf = sensors_get_subfeature_r(config, name, feature,
 					 SENSORS_SUBFEATURE_TEMP_BEEP))) {
 		temperature->beepNumber = sf->number;
 	} else {
@@ -247,16 +247,16 @@ static void fillChipFan(FeatureDescriptor *fan,
 	fan->rrd = rrdF0;
 	fan->type = DataType_rpm;
 
-	sf = sensors_get_subfeature(name, feature,
+	sf = sensors_get_subfeature_r(config, name, feature,
 				    SENSORS_SUBFEATURE_FAN_INPUT);
 	if (sf)
 		fan->dataNumbers[pos++] = sf->number;
 
-	sfmin = sensors_get_subfeature(name, feature,
+	sfmin = sensors_get_subfeature_r(config, name, feature,
 				       SENSORS_SUBFEATURE_FAN_MIN);
 	if (sfmin) {
 		fan->dataNumbers[pos++] = sfmin->number;
-		sfdiv = sensors_get_subfeature(name, feature,
+		sfdiv = sensors_get_subfeature_r(config, name, feature,
 					       SENSORS_SUBFEATURE_FAN_DIV);
 		if (sfdiv) {
 			fan->format = fmtFans_0;
@@ -272,7 +272,7 @@ static void fillChipFan(FeatureDescriptor *fan,
 	fan->dataNumbers[pos] = -1;
 
 	/* alarm if applicable */
-	sf = sensors_get_subfeature(name, feature,
+	sf = sensors_get_subfeature_r(config, name, feature,
 				    SENSORS_SUBFEATURE_FAN_ALARM);
 	if (sf) {
 		fan->alarmNumber = sf->number;
@@ -280,7 +280,7 @@ static void fillChipFan(FeatureDescriptor *fan,
 		fan->alarmNumber = -1;
 	}
 	/* beep if applicable */
-	sf = sensors_get_subfeature(name, feature,
+	sf = sensors_get_subfeature_r(config, name, feature,
 				    SENSORS_SUBFEATURE_FAN_BEEP);
 	if (sf) {
 		fan->beepNumber = sf->number;
@@ -295,7 +295,7 @@ static void fillChipVid(FeatureDescriptor *vid,
 {
 	const sensors_subfeature *sub;
 
-	sub = sensors_get_subfeature(name, feature, SENSORS_SUBFEATURE_VID);
+	sub = sensors_get_subfeature_r(config, name, feature, SENSORS_SUBFEATURE_VID);
 	if (!sub)
 		return;
 
@@ -314,7 +314,7 @@ static void fillChipBeepEnable(FeatureDescriptor *beepen,
 {
 	const sensors_subfeature *sub;
 
-	sub = sensors_get_subfeature(name, feature,
+	sub = sensors_get_subfeature_r(config, name, feature,
 				     SENSORS_SUBFEATURE_BEEP_ENABLE);
 	if (!sub)
 		return;
@@ -336,7 +336,7 @@ static FeatureDescriptor * generateChipFeatures(const sensors_chip_name *chip)
 
 	/* How many main features do we have? */
 	nr = 0;
-	while ((sensor = sensors_get_features(chip, &nr)))
+	while ((sensor = sensors_get_features_r(config, chip, &nr)))
 		count++;
 
 	/* Allocate the memory we need */
@@ -347,7 +347,7 @@ static FeatureDescriptor * generateChipFeatures(const sensors_chip_name *chip)
 	/* Fill in the data structures */
 	count = 0;
 	nr = 0;
-	while ((sensor = sensors_get_features(chip, &nr))) {
+	while ((sensor = sensors_get_features_r(config, chip, &nr))) {
 		switch (sensor->type) {
 		case SENSORS_FEATURE_TEMP:
 			fillChipTemperature(&features[count], chip, sensor);
@@ -384,7 +384,7 @@ int initKnownChips(void)
 
 	/* How many chips do we have? */
 	nr = 0;
-	while ((name = sensors_get_detected_chips(NULL, &nr)))
+	while ((name = sensors_get_detected_chips_r(config, NULL, &nr)))
 		count++;
 
 	/* Allocate the memory we need */
@@ -395,7 +395,7 @@ int initKnownChips(void)
 	/* Fill in the data structures */
 	count = 0;
 	nr = 0;
-	while ((name = sensors_get_detected_chips(NULL, &nr))) {
+	while ((name = sensors_get_detected_chips_r(config, NULL, &nr))) {
 		knownChips[count].name = name;
 		if ((knownChips[count].features = generateChipFeatures(name)))
 			count++;

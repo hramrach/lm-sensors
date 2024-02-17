@@ -22,13 +22,11 @@
 #ifndef LIB_SENSORS_SYSFS_H
 #define LIB_SENSORS_SYSFS_H
 
-extern const char *sensors_sysfs_mount;
+int sensors_init_sysfs(sensors_config *config);
 
-int sensors_init_sysfs(void);
+int sensors_read_sysfs_chips(sensors_config *config);
 
-int sensors_read_sysfs_chips(void);
-
-int sensors_read_sysfs_bus(void);
+int sensors_read_sysfs_bus(sensors_config *config);
 
 /* Read a value out of a sysfs attribute file */
 int sensors_read_sysfs_attr(const sensors_chip_name *name,

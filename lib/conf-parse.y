@@ -31,16 +31,17 @@
 #include "conf.h"
 #include "access.h"
 #include "init.h"
+#include "conf-lex.h"
+#include "unused.h"
 
-static void sensors_yyerror(const char *err);
+static void sensors_yyerror(sensors_config *config, sensors_chip *current_chip, yyscan_t yyscanner,
+			    const char *err);
 static sensors_expr *malloc_expr(void);
 
-static sensors_chip *current_chip = NULL;
-
 #define bus_add_el(el) sensors_add_array_el(el,\
-                                      &sensors_config_busses,\
-                                      &sensors_config_busses_count,\
-                                      &sensors_config_busses_max,\
+                                      &config->busses,\
+                                      &config->busses_count,\
+                                      &config->busses_max,\
                                       sizeof(sensors_bus))
 #define label_add_el(el) sensors_add_array_el(el,\
                                         &current_chip->labels,\
@@ -63,9 +64,9 @@ static sensors_chip *current_chip = NULL;
                                           &current_chip->ignores_max,\
                                           sizeof(sensors_ignore));
 #define chip_add_el(el) sensors_add_array_el(el,\
-                                       &sensors_config_chips,\
-                                       &sensors_config_chips_count,\
-                                       &sensors_config_chips_max,\
+                                       &config->chips,\
+                                       &config->chips_count,\
+                                       &config->chips_max,\
                                        sizeof(sensors_chip));
 
 #define fits_add_el(el,list) sensors_add_array_el(el,\
@@ -75,6 +76,12 @@ static sensors_chip *current_chip = NULL;
 		                                  sizeof(sensors_chip_name));
 
 %}
+
+%define api.pure full
+
+%parse-param {sensors_config *config}
+%parse-param {sensors_chip *current_chip}
+%param {yyscan_t yyscanner}
 
 %union {
   double value;
@@ -141,7 +148,7 @@ bus_statement:	  BUS bus_id adapter_name
 label_statement:	  LABEL function_name string
 			  { sensors_label new_el;
 			    if (!current_chip) {
-			      sensors_yyerror("Label statement before first chip statement");
+			      sensors_yyerror(config, current_chip, yyscanner, "Label statement before first chip statement");
 			      free($2);
 			      free($3);
 			      YYERROR;
@@ -156,7 +163,7 @@ label_statement:	  LABEL function_name string
 set_statement:	  SET function_name expression
 		  { sensors_set new_el;
 		    if (!current_chip) {
-		      sensors_yyerror("Set statement before first chip statement");
+		      sensors_yyerror(config, current_chip, yyscanner, "Set statement before first chip statement");
 		      free($2);
 		      sensors_free_expr($3);
 		      YYERROR;
@@ -171,7 +178,7 @@ set_statement:	  SET function_name expression
 compute_statement:	  COMPUTE function_name expression ',' expression
 			  { sensors_compute new_el;
 			    if (!current_chip) {
-			      sensors_yyerror("Compute statement before first chip statement");
+			      sensors_yyerror(config, current_chip, yyscanner, "Compute statement before first chip statement");
 			      free($2);
 			      sensors_free_expr($3);
 			      sensors_free_expr($5);
@@ -188,7 +195,7 @@ compute_statement:	  COMPUTE function_name expression ',' expression
 ignore_statement:	IGNORE function_name
 			{ sensors_ignore new_el;
 			  if (!current_chip) {
-			    sensors_yyerror("Ignore statement before first chip statement");
+			    sensors_yyerror(config, current_chip, yyscanner, "Ignore statement before first chip statement");
 			    free($2);
 			    YYERROR;
 			  }
@@ -211,8 +218,8 @@ chip_statement:	  CHIP chip_name_list
 		    new_el.ignores_count = new_el.ignores_max = 0;
 		    new_el.chips = $2;
 		    chip_add_el(&new_el);
-		    current_chip = sensors_config_chips +
-		                   sensors_config_chips_count - 1;
+		    current_chip = config->chips +
+		                   config->chips_count - 1;
 		  }
 ;
 
@@ -299,7 +306,7 @@ bus_id:		  NAME
 		  { int res = sensors_parse_bus_id($1,&$$);
 		    free($1);
 		    if (res) {
-                      sensors_yyerror("Parse error in bus id");
+                      sensors_yyerror(config, current_chip, yyscanner, "Parse error in bus id");
 		      YYERROR;
                     }
 		  }
@@ -321,7 +328,7 @@ chip_name:	  NAME
 		  { int res = sensors_parse_chip_name($1,&$$);
 		    free($1);
 		    if (res) {
-		      sensors_yyerror("Parse error in chip name");
+		      sensors_yyerror(config, current_chip, yyscanner, "Parse error in chip name");
 		      YYERROR;
 		    }
 		  }
@@ -329,13 +336,15 @@ chip_name:	  NAME
 
 %%
 
-void sensors_yyerror(const char *err)
+void sensors_yyerror(sensors_config *UNUSED(config), sensors_chip *UNUSED(current_chip), yyscan_t yyscanner,
+		     const char *err)
 {
-  if (sensors_lex_error[0]) {
-    sensors_parse_error_wfn(sensors_lex_error, sensors_yyfilename, sensors_yylineno);
-    sensors_lex_error[0] = '\0';
+  extra *extra_data = sensors_yyget_extra(yyscanner);
+  if (extra_data->lex_error) {
+    sensors_parse_error_wfn(extra_data->lex_error, extra_data->filename, extra_data->lineno);
+    extra_data->lex_error = NULL;
   } else
-    sensors_parse_error_wfn(err, sensors_yyfilename, sensors_yylineno);
+    sensors_parse_error_wfn(err, extra_data->filename, extra_data->lineno);
 }
 
 sensors_expr *malloc_expr(void)
