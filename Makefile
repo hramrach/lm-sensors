@@ -197,10 +197,13 @@ MANPAGES := $(LIBMAN3FILES) $(LIBMAN5FILES) $(PROGDETECTMAN8FILES) $(PROGDUMPMAN
 
 check:: test
 
-test:: shellcheck test-sensors test-lib
+test:: shellcheck perlcheck test-sensors test-lib
 
 shellcheck::
 	shellcheck $(SHELLCHECKFILES)
+
+perlcheck::
+	for i in $(PERL_SOURCES) ; do perl -c $$i ; done
 
 test-lib:: lib/test/test-scanner
 	cd lib/test ; ./test-scanner.pl
