@@ -755,7 +755,7 @@ int sensors_init_sysfs(void)
 
 	snprintf(hwmon_path, length, "%s%s", sensors_sysfs_mount, hwmon_subdir);
 	result = !stat(hwmon_path, &statbuf) && ((statbuf.st_mode & S_IFMT) == S_IFDIR);
-	if (!result)
+	if (sysfs_root_env && !result)
 		fprintf(stderr, "%s: No sensors at %s.\n", sensors_sysfs_mount, hwmon_path);
 
 	free(hwmon_path);
