@@ -388,7 +388,7 @@
       "crit": {
         "quantity": "temperature",
         "unit": "°C",
-        "value": 93.85
+        "value": 93.84999999999999
       },
       "input": {
         "quantity": "temperature",
@@ -399,7 +399,7 @@
       "max": {
         "quantity": "temperature",
         "unit": "°C",
-        "value": 89.85
+        "value": 89.84999999999999
       },
       "min": {
         "quantity": "temperature",
