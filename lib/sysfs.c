@@ -139,7 +139,7 @@ static int sysfs_foreach_busdev(const char *bus_type,
 const char *sensors_sysfs_mount = "/sys";
 
 static
-int get_type_scaling(sensors_subfeature_type type)
+double get_type_scaling(sensors_subfeature_type type)
 {
 	/* Multipliers for second class subfeatures
 	   that need their own multiplier */
