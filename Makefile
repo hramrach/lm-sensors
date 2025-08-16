@@ -171,6 +171,23 @@ LIBCFLAGS := -fpic -D_REENTRANT $(ALL_CFLAGS)
 
 ALL_LDFLAGS := $(LDFLAGS)
 
+# Determine iconv linking requirements
+# glibc has built-in iconv, other libc implementations may need -liconv
+ifndef LIBICONV
+  ICONV_TEST := $(shell printf '%s\n' \
+    '#include <iconv.h>' \
+    'int main() { iconv_t cd = iconv_open("UTF-8", "ASCII"); return 0; }' \
+    | $(CC) $(ALL_CPPFLAGS) -x c - -o /tmp/lm_sensors_iconv_test 2>/dev/null && echo "builtin" || echo "external")
+
+  ifeq ($(ICONV_TEST),builtin)
+    LIBICONV :=
+  else
+    LIBICONV := -liconv
+  endif
+
+  $(shell rm -f /tmp/lm_sensors_iconv_test)
+endif
+
 EXLDFLAGS := -Wl,-rpath,$(LIBDIR) $(ALL_LDFLAGS)
 
 .PHONY: all user clean install user_install uninstall user_uninstall
