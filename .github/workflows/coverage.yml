@@ -12,6 +12,7 @@ jobs:
       - name: ⬇️ Download artifact
         uses: actions/github-script@v9
         with:
+          github-token: ${{ secrets.TOKEN }}
           script: |
             let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
               owner: context.repo.owner,
@@ -34,6 +35,7 @@ jobs:
       - name: 🏔️ generate coverage report
         uses: romeovs/lcov-reporter-action@v0.3.1
         with:
+          github-token: ${{ secrets.TOKEN }}
           lcov-file: "${{ github.workspace }}/coverage-current.info"
           lcov-base: "${{ github.workspace }}/coverage-base.info"
           delete-old-comments: true
