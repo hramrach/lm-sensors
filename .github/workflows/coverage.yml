@@ -1,8 +1,7 @@
 on:
   workflow_run:
-    workflows: [Upload data]
-    types:
-      - completed
+    workflows: [🍥GitHub Action Debian]
+    types: [completed]
 
 jobs:
   download:
