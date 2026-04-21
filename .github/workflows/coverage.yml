@@ -1,10 +1,12 @@
+name: 🏔️ Display coverage data
+
 on:
   workflow_run:
     workflows: [🍥GitHub Action Debian]
     types: [completed]
 
 jobs:
-  download:
+  Display-Coverage:
     runs-on: ubuntu-latest
     steps:
       - name: ⬇️ Download artifact
