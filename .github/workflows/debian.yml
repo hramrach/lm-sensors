@@ -9,16 +9,16 @@ jobs:
       - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
       - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
       - name: 📨 Check out repository code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: current
       - name: 🏚︎ Check out the base branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: base
           ref: ${{ github.base_ref }}
       - name: 🌨️ checkout lcov
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: lcov
           ref: v2.0
@@ -57,7 +57,7 @@ jobs:
           done
 
       - name: ⬆ Upload coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Coverage report
           path: |
