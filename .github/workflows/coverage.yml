@@ -33,7 +33,7 @@ jobs:
       - name: 📂Unzip artifact
         run: unzip coverage-report.zip
       - name: 🏔️ generate coverage report
-        uses: romeovs/lcov-reporter-action@v0.3.1
+        uses: hramrach/lcov-reporter-action@master
         with:
           github-token: ${{ secrets.TOKEN }}
           lcov-file: "${{ github.workspace }}/coverage-current.info"
