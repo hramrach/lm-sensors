@@ -38,5 +38,6 @@ jobs:
           github-token: ${{ secrets.TOKEN }}
           lcov-file: "${{ github.workspace }}/coverage-current.info"
           lcov-base: "${{ github.workspace }}/coverage-base.info"
+          pr-number: "${{ github.workspace }}/pr_number"
           delete-old-comments: true
           update-comment: true
