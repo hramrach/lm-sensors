@@ -56,9 +56,8 @@ jobs:
           cp ${{ github.workspace }}/$dir/coverage.info ${{ github.workspace }}/coverage-$dir.info
           done
           PR_NUMBER="${{ github.event.pull_request.number }}"
-          if [ -n "$PR_NUMBER" ] ; then
-          echo -n "$PR_NUMBER" > ${{ github.workspace }}/pr-number
-          fi
+          cp ${{ github.event_path }} ${{ github.workspace }}/event
+          cat ${{ github.workspace }}/event
 
       - name: ⬆ Upload coverage
         uses: actions/upload-artifact@v7
@@ -67,4 +66,4 @@ jobs:
           path: |
             ${{ github.workspace }}/coverage-current.info
             ${{ github.workspace }}/coverage-base.info
-            ${{ github.workspace }}/pr-number
+            ${{ github.workspace }}/event
