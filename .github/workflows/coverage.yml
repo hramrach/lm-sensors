@@ -31,13 +31,13 @@ jobs:
             let fs = require('fs');
             fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/coverage-report.zip`, Buffer.from(download.data));
       - name: 📂Unzip artifact
-        run: unzip coverage-report.zip
+        run: unzip coverage-report.zip -d ${{ github.workspace }}
       - name: 🏔️ generate coverage report
         uses: hramrach/lcov-reporter-action@master
         with:
           github-token: ${{ secrets.TOKEN }}
-          lcov-file: "coverage-current.info"
-          lcov-base: "coverage-base.info"
-          pr-number: "pr_number"
+          lcov-file: "${{ github.workspace }}/coverage-current.info"
+          lcov-base: "${{ github.workspace }}/coverage-base.info"
+          pr-number: "${{ github.workspace }}/pr_number"
           delete-old-comments: true
           update-comment: true
