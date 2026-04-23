@@ -21,8 +21,9 @@
 #ifndef LIB_SENSORS_SCANNER_H
 #define LIB_SENSORS_SCANNER_H
 
-int sensors_scanner_init(FILE *input, const char *filename);
-void sensors_scanner_exit(void);
+typedef void *yyscan_t;
+int sensors_scanner_init(FILE *input, const char *filename, yyscan_t *p_yyscanner);
+void sensors_scanner_exit(yyscan_t yyscanner);
 
 #endif /* def LIB_SENSORS_SCANNER_H */
 

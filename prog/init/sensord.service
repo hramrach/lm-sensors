@@ -3,10 +3,20 @@ Description=Log hardware monitoring data
 After=lm_sensors.service
 
 [Service]
+# added automatically, for details please see
+# https://en.opensuse.org/openSUSE:Security_Features#Systemd_hardening_effort
+ProtectSystem=full
+ProtectHome=true
+ProtectHostname=true
+ProtectKernelTunables=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictRealtime=true
+# end of automatic additions
 EnvironmentFile=/etc/sysconfig/sensord
 Type=forking
 PIDFile=/run/sensord.pid
-ExecStart=/usr/sbin/sensord -i $INTERVAL -l $LOG_INTERVAL -f daemon
+ExecStart=/usr/sbin/sensord -i $INTERVAL -l $LOG_INTERVAL -f daemon $SENSORD_ARGS
 
 [Install]
 WantedBy=multi-user.target

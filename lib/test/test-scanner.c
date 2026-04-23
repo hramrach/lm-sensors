@@ -23,22 +23,24 @@
 #include "../data.h"
 #include "../conf.h"
 #include "../conf-parse.h"
+#include "../conf-lex.h"
 #include "../scanner.h"
 
 YYSTYPE sensors_yylval;
+yyscan_t yyscanner;
 
 int main(void)
 {
 	int result;
 
 	/* init the scanner */
-	if ((result = sensors_scanner_init(stdin, NULL)))
+	if ((result = sensors_scanner_init(stdin, NULL, &yyscanner)))
 		return result;
 
 	do {
-		result = sensors_yylex();
+		result = sensors_yylex(&sensors_yylval, yyscanner);
 
-		printf("%d: ", sensors_yylineno);
+		printf("%d: ", sensors_yyget_extra(yyscanner)->lineno);
 
 		switch (result) {
 
@@ -49,44 +51,44 @@ int main(void)
 			case NEG:
 				printf("NEG\n");
 				break;
-	
+
 			case EOL:
 				printf("EOL\n");
 				break;
-	
+
 			case BUS:
 				printf("BUS\n");
 				break;
-	
+
 			case LABEL:
 				printf("LABEL\n");
 				break;
-	
+
 			case SET:
 				printf("SET\n");
 				break;
-	
+
 			case CHIP:
 				printf("CHIP\n");
 				break;
-	
+
 			case COMPUTE:
 				printf("COMPUTE\n");
 				break;
-	
+
 			case IGNORE:
 				printf("IGNORE\n");
 				break;
-	
+
 			case FLOAT:
 				printf("FLOAT: %f\n", sensors_yylval.value);
 				break;
-	
+
 			case NAME:
 				printf("NAME: %s\n", sensors_yylval.name);
 				free(sensors_yylval.name);
 				break;
-	
+
 			case ERROR:
 				printf("ERROR\n");
 				break;
@@ -99,8 +101,7 @@ int main(void)
 	} while (result);
 
 	/* clean up the scanner */
-	sensors_scanner_exit();
+	sensors_scanner_exit(yyscanner);
 
 	return 0;
 }
-

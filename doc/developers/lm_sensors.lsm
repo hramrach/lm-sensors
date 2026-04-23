@@ -1,8 +1,8 @@
 Begin4
 Title: lm_sensors
-Version: 3.6.0
-Entered-date: 2019-10-18
-Description: Hardware health monitoring package for Linux. It consists of 
+Version: 3.6.2
+Entered-date: 2024-01-13
+Description: Hardware health monitoring package for Linux. It consists of
              a library to allow applications to read sensors data more
              easily, and of an example program to pretty print this data.
              Also included is a fan speed control script.
@@ -11,6 +11,6 @@ Keywords: sensors health hardware-monitoring fan-speed
 Author: jdelvare@suse.de (Jean Delvare)
 Maintained-by: olysonek@redhat.com (Ondřej Lysoněk)
 Primary-site: https://github.com
-              /lm-sensors/lm-sensors/archive/V3-6-0/lm-sensors-3-6-0.tar.gz
+              /hramrach/lm-sensors/archive/V3-6-2/lm-sensors-3-6-2.tar.gz
 Copying-policy: GPL/LGPL
 End

@@ -139,43 +139,48 @@ typedef struct sensors_chip_features {
 	int subfeature_count;
 } sensors_chip_features;
 
-extern char **sensors_config_files;
-extern int sensors_config_files_count;
-extern int sensors_config_files_max;
-
 #define sensors_add_config_files(el) sensors_add_array_el( \
-	(el), &sensors_config_files, &sensors_config_files_count, \
-	&sensors_config_files_max, sizeof(char *))
-
-extern sensors_chip *sensors_config_chips;
-extern int sensors_config_chips_count;
-extern int sensors_config_chips_subst;
-extern int sensors_config_chips_max;
-
-extern sensors_bus *sensors_config_busses;
-extern int sensors_config_busses_count;
-extern int sensors_config_busses_max;
-
-extern sensors_chip_features *sensors_proc_chips;
-extern int sensors_proc_chips_count;
-extern int sensors_proc_chips_max;
+	(el), &config->files, &config->files_count, \
+	&config->files_max, sizeof(char *))
 
 #define sensors_add_proc_chips(el) sensors_add_array_el( \
-	(el), &sensors_proc_chips, &sensors_proc_chips_count,\
-	&sensors_proc_chips_max, sizeof(struct sensors_chip_features))
-
-extern sensors_bus *sensors_proc_bus;
-extern int sensors_proc_bus_count;
-extern int sensors_proc_bus_max;
+	(el), &config->features, &config->features_count,\
+	&config->features_max, sizeof(struct sensors_chip_features))
 
 #define sensors_add_proc_bus(el) sensors_add_array_el( \
-	(el), &sensors_proc_bus, &sensors_proc_bus_count,\
-	&sensors_proc_bus_max, sizeof(struct sensors_bus))
+	(el), &config->bus, &config->bus_count,\
+	&config->bus_max, sizeof(struct sensors_bus))
+
+typedef struct sensors_config {
+const char *sysfs_mount;
+
+char **files;
+int files_count;
+int files_max;
+
+sensors_chip *chips;
+int chips_count;
+int chips_subst;
+int chips_max;
+
+sensors_bus *busses;
+int busses_count;
+int busses_max;
+
+sensors_chip_features *features;
+int features_count;
+int features_max;
+
+sensors_bus *bus;
+int bus_count;
+int bus_max;
+} sensors_config;
+
+extern sensors_config global_sensors_config;
 
 /* Substitute configuration bus numbers with real-world bus numbers
    in the chips lists */
-int sensors_substitute_busses(void);
-
+int sensors_substitute_busses(sensors_config *config);
 
 /* Parse a bus id into its components. Returns 0 on success, a value from
    error.h on failure. */

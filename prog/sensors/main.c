@@ -42,9 +42,11 @@
 #define VERSION			LM_VERSION
 
 static int do_sets, do_raw, do_json, hide_adapter;
+int new_json;
 
 int fahrenheit;
 char degstr[5]; /* store the correct string to print degrees */
+sensors_config *config;
 
 static void print_short_help(void)
 {
@@ -105,8 +107,8 @@ static int read_config_file(const char *config_file_name)
 		config_file = NULL;
 	}
 
-	err = sensors_init(config_file);
-	if (err) {
+	config = sensors_init_r(config_file, &err);
+	if (!config) {
 		fprintf(stderr, "sensors_init: %s\n", sensors_strerror(err));
 		if (config_file)
 			fclose(config_file);
@@ -162,7 +164,7 @@ static void do_a_print(const sensors_chip_name *name)
 {
 	printf("%s\n", sprintf_chip_name(name));
 	if (!hide_adapter) {
-		const char *adap = sensors_get_adapter_name(&name->bus);
+		const char *adap = sensors_get_adapter_name_r(config, &name->bus);
 		if (adap)
 			printf("Adapter: %s\n", adap);
 		else
@@ -177,16 +179,22 @@ static void do_a_print(const sensors_chip_name *name)
 
 static void do_a_json_print(const sensors_chip_name *name)
 {
-	printf("   \"%s\":{\n", sprintf_chip_name(name));
+	printf("\"%s\":{", sprintf_chip_name(name));
 	if (!hide_adapter) {
-		const char *adap = sensors_get_adapter_name(&name->bus);
-		if (adap)
-			printf("      \"Adapter\": \"%s\",\n", adap);
-		else
+		int a = 0;
+		const char *adap = sensors_get_adapter_name_r(config, &name->bus);
+		if (adap) {
+			printf("\"Adapter\":\"%s\"", adap);
+			/* only print trailing ',' if there are features to list */
+			if (sensors_get_features_r(config, name, &a) != NULL) {
+				printf(",");
+			}
+		} else {
 			fprintf(stderr, "Can't get adapter name\n");
+		}
 	}
 	print_chip_json(name);
-	printf("   }");
+	printf("}");
 }
 
 /* returns 1 on error */
@@ -194,7 +202,7 @@ static int do_a_set(const sensors_chip_name *name)
 {
 	int err;
 
-	if ((err = sensors_do_chip_sets(name))) {
+	if ((err = sensors_do_chip_sets_r(config, name))) {
 		if (err == -SENSORS_ERR_KERNEL) {
 			fprintf(stderr, "%s: %s\n",
 				sprintf_chip_name(name),
@@ -221,16 +229,16 @@ static int do_the_real_work(const sensors_chip_name *match, int *err)
 	int cnt = 0;
 
 	if (do_json)
-		printf("{\n");
+		printf("{");
 	chip_nr = 0;
-	while ((chip = sensors_get_detected_chips(match, &chip_nr))) {
+	while ((chip = sensors_get_detected_chips_r(config, match, &chip_nr))) {
 		if (do_sets) {
 			if (do_a_set(chip))
 				*err = 1;
 		} else {
 			if (do_json) {
 				if (cnt > 0)
-					printf(",\n");
+					printf(",");
 				do_a_json_print(chip);
 			} else {
 				do_a_print(chip);
@@ -239,7 +247,7 @@ static int do_the_real_work(const sensors_chip_name *match, int *err)
 		cnt++;
 	}
 	if (do_json)
-		printf("\n}\n");
+		printf("}\n");
 	return cnt;
 }
 
@@ -254,7 +262,7 @@ static void print_bus_list(void)
 	unsigned long seen_i2c = 0;
 
 	chip_nr = 0;
-	while ((chip = sensors_get_detected_chips(NULL, &chip_nr))) {
+	while ((chip = sensors_get_detected_chips_r(config, NULL, &chip_nr))) {
 		switch (chip->bus.type) {
 		case SENSORS_BUS_TYPE_I2C:
 			if (chip->bus.nr < (int)sizeof(unsigned long) * 8) {
@@ -263,7 +271,7 @@ static void print_bus_list(void)
 				seen_i2c |= 1 << chip->bus.nr;
 			}
 			printf("bus \"i2c-%d\" \"%s\"\n", chip->bus.nr,
-			       sensors_get_adapter_name(&chip->bus));
+			       sensors_get_adapter_name_r(config, &chip->bus));
 			break;
 		}
 	}
@@ -290,12 +298,13 @@ int main(int argc, char *argv[])
 
 	do_raw = 0;
 	do_json = 0;
+	new_json = 0;
 	do_sets = 0;
 	do_bus_list = 0;
 	hide_adapter = 0;
 	allow_no_sensors = 0;
 	while (1) {
-		c = getopt_long(argc, argv, "hsvfAc:ujn", long_opts, NULL);
+		c = getopt_long(argc, argv, "hsvfAc:ujJn", long_opts, NULL);
 		if (c == EOF)
 			break;
 		switch(c) {
@@ -326,6 +335,10 @@ int main(int argc, char *argv[])
 			break;
 		case 'j':
 			do_json = 1;
+			break;
+		case 'J':
+			do_json = 1;
+			new_json = 1;
 			break;
 		case 'B':
 			do_bus_list = 1;
@@ -383,6 +396,6 @@ int main(int argc, char *argv[])
 	}
 
 exit:
-	sensors_cleanup();
+	sensors_cleanup_r(config);
 	exit(err);
 }

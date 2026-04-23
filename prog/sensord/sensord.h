@@ -35,6 +35,8 @@ extern void freeChips(void);
 
 /* from lib.c */
 
+extern sensors_config *config;
+
 extern int loadLib(const char *cfgPath);
 extern int reloadLib(const char *cfgPath);
 extern int unloadLib(void);

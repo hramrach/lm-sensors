@@ -21,6 +21,8 @@
 # installed; typically /etc).
 ETC_DIR := etc
 
+PERL_SOURCES += $(ETC_DIR)/sensors-conf-convert
+
 install-etc:
 	$(MKDIR) $(DESTDIR)$(ETCDIR) $(DESTDIR)$(ETCDIR)/sensors.d
 	if [ ! -e $(DESTDIR)$(ETCDIR)/sensors3.conf ] ; then \

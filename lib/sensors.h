@@ -25,13 +25,19 @@
 #include <stdio.h>
 #include <limits.h>
 
+#ifdef __GNUC__
+#define SENSORS_DEPRECATED(X) X __attribute__((deprecated ("Please use the reentrant interface")))
+#else
+#define SENSORS_DEPRECATED(X) X
+#endif
+
 /* Publicly accessible library functions */
 
 /* libsensors API version define, first digit is the major version (changed
    when the API or ABI breaks), the third digit is incremented to track small
    API additions like new flags / enum values. The second digit is for tracking
    larger additions like new methods. */
-#define SENSORS_API_VERSION		0x500
+#define SENSORS_API_VERSION		0x510
 
 #define SENSORS_CHIP_NAME_PREFIX_ANY	NULL
 #define SENSORS_CHIP_NAME_ADDR_ANY	(-1)
@@ -46,6 +52,7 @@
 #define SENSORS_BUS_TYPE_HID		6
 #define SENSORS_BUS_TYPE_MDIO		7
 #define SENSORS_BUS_TYPE_SCSI		8
+#define SENSORS_BUS_TYPE_SDIO		9
 #define SENSORS_BUS_NR_ANY		(-1)
 #define SENSORS_BUS_NR_IGNORE		(-2)
 
@@ -68,16 +75,20 @@ typedef struct sensors_chip_name {
 	char *path;
 } sensors_chip_name;
 
+typedef struct sensors_config sensors_config;
+
 /* Load the configuration file and the detected chips list. If this
    returns a value unequal to zero, you are in trouble; you can not
    assume anything will be initialized properly. If you want to
    reload the configuration file, call sensors_cleanup() below before
    calling sensors_init() again. */
-int sensors_init(FILE *input);
+SENSORS_DEPRECATED(int sensors_init(FILE *input));
+sensors_config *sensors_init_r(FILE *input, int *err);
 
 /* Clean-up function: You can't access anything after
    this, until the next sensors_init() call! */
-void sensors_cleanup(void);
+SENSORS_DEPRECATED(void sensors_cleanup(void));
+void sensors_cleanup_r(sensors_config *config);
 
 /* Parse a chip name to the internal representation. Return 0 on success, <0
    on error. */
@@ -95,7 +106,8 @@ int sensors_snprintf_chip_name(char *str, size_t size,
 /* This function returns the adapter name of a bus,
    as used within the sensors_chip_name structure. If it could not be found,
    it returns NULL */
-const char *sensors_get_adapter_name(const sensors_bus_id *bus);
+SENSORS_DEPRECATED(const char *sensors_get_adapter_name(const sensors_bus_id *bus));
+const char *sensors_get_adapter_name_r(sensors_config* config, const sensors_bus_id *bus);
 
 typedef struct sensors_feature sensors_feature;
 
@@ -103,32 +115,41 @@ typedef struct sensors_feature sensors_feature;
    contain wildcard values! The returned string is newly allocated (free it
    yourself). On failure, NULL is returned.
    If no label exists for this feature, its name is returned itself. */
-char *sensors_get_label(const sensors_chip_name *name,
-			const sensors_feature *feature);
+SENSORS_DEPRECATED(char *sensors_get_label(const sensors_chip_name *name, const sensors_feature *feature));
+char *sensors_get_label_r(sensors_config* config,
+			  const sensors_chip_name *name,
+			  const sensors_feature *feature);
 
 /* Read the value of a subfeature of a certain chip. Note that chip should not
    contain wildcard values! This function will return 0 on success, and <0
    on failure.  */
-int sensors_get_value(const sensors_chip_name *name, int subfeat_nr,
-		      double *value);
+SENSORS_DEPRECATED(int sensors_get_value(const sensors_chip_name *name, int subfeat_nr, double *value));
+int sensors_get_value_r(sensors_config* config,
+			const sensors_chip_name *name, int subfeat_nr,
+			double *value);
 
 /* Set the value of a subfeature of a certain chip. Note that chip should not
    contain wildcard values! This function will return 0 on success, and <0
    on failure. */
-int sensors_set_value(const sensors_chip_name *name, int subfeat_nr,
-		      double value);
+SENSORS_DEPRECATED(int sensors_set_value(const sensors_chip_name *name, int subfeat_nr, double value));
+int sensors_set_value_r(sensors_config* config,
+			const sensors_chip_name *name, int subfeat_nr,
+			double value);
 
 /* Execute all set statements for this particular chip. The chip may contain
    wildcards!  This function will return 0 on success, and <0 on failure. */
-int sensors_do_chip_sets(const sensors_chip_name *name);
+SENSORS_DEPRECATED(int sensors_do_chip_sets(const sensors_chip_name *name));
+int sensors_do_chip_sets_r(sensors_config* config, const sensors_chip_name *name);
 
 /* This function returns all detected chips that match a given chip name,
    one by one. If no chip name is provided, all detected chips are returned.
    To start at the beginning of the list, use 0 for nr; NULL is returned if
    we are at the end of the list. Do not try to change these chip names, as
    they point to internal structures! */
-const sensors_chip_name *sensors_get_detected_chips(const sensors_chip_name
-						    *match, int *nr);
+SENSORS_DEPRECATED(const sensors_chip_name *sensors_get_detected_chips(const sensors_chip_name *match, int *nr));
+const sensors_chip_name *sensors_get_detected_chips_r(sensors_config* config,
+						      const sensors_chip_name
+						      *match, int *nr);
 
 /* These defines are used in the flags field of sensors_subfeature */
 #define SENSORS_MODE_R			1
@@ -143,11 +164,13 @@ typedef enum sensors_feature_type {
 	SENSORS_FEATURE_ENERGY		= 0x04,
 	SENSORS_FEATURE_CURR		= 0x05,
 	SENSORS_FEATURE_HUMIDITY	= 0x06,
+	SENSORS_FEATURE_PWM		= 0x07,
 	SENSORS_FEATURE_MAX_MAIN,
 	SENSORS_FEATURE_VID		= 0x10,
 	SENSORS_FEATURE_INTRUSION	= 0x11,
 	SENSORS_FEATURE_MAX_OTHER,
 	SENSORS_FEATURE_BEEP_ENABLE	= 0x18,
+	SENSORS_FEATURE_FREQ,
 	SENSORS_FEATURE_MAX,
 	SENSORS_FEATURE_UNKNOWN		= INT_MAX,
 } sensors_feature_type;
@@ -163,6 +186,8 @@ typedef enum sensors_subfeature_type {
 	SENSORS_SUBFEATURE_IN_AVERAGE,
 	SENSORS_SUBFEATURE_IN_LOWEST,
 	SENSORS_SUBFEATURE_IN_HIGHEST,
+	SENSORS_SUBFEATURE_IN_RATED_MIN,
+	SENSORS_SUBFEATURE_IN_RATED_MAX,
 	SENSORS_SUBFEATURE_IN_ALARM = (SENSORS_FEATURE_IN << 8) | 0x80,
 	SENSORS_SUBFEATURE_IN_MIN_ALARM,
 	SENSORS_SUBFEATURE_IN_MAX_ALARM,
@@ -217,6 +242,8 @@ typedef enum sensors_subfeature_type {
 	SENSORS_SUBFEATURE_POWER_CRIT,
 	SENSORS_SUBFEATURE_POWER_MIN,
 	SENSORS_SUBFEATURE_POWER_LCRIT,
+	SENSORS_SUBFEATURE_POWER_RATED_MIN,
+	SENSORS_SUBFEATURE_POWER_RATED_MAX,
 	SENSORS_SUBFEATURE_POWER_AVERAGE_INTERVAL = (SENSORS_FEATURE_POWER << 8) | 0x80,
 	SENSORS_SUBFEATURE_POWER_ALARM,
 	SENSORS_SUBFEATURE_POWER_CAP_ALARM,
@@ -235,6 +262,8 @@ typedef enum sensors_subfeature_type {
 	SENSORS_SUBFEATURE_CURR_AVERAGE,
 	SENSORS_SUBFEATURE_CURR_LOWEST,
 	SENSORS_SUBFEATURE_CURR_HIGHEST,
+	SENSORS_SUBFEATURE_CURR_RATED_MIN,
+	SENSORS_SUBFEATURE_CURR_RATED_MAX,
 	SENSORS_SUBFEATURE_CURR_ALARM = (SENSORS_FEATURE_CURR << 8) | 0x80,
 	SENSORS_SUBFEATURE_CURR_MIN_ALARM,
 	SENSORS_SUBFEATURE_CURR_MAX_ALARM,
@@ -244,6 +273,11 @@ typedef enum sensors_subfeature_type {
 
 	SENSORS_SUBFEATURE_HUMIDITY_INPUT = SENSORS_FEATURE_HUMIDITY << 8,
 
+	SENSORS_SUBFEATURE_PWM_IO = SENSORS_FEATURE_PWM << 8,
+	SENSORS_SUBFEATURE_PWM_FREQ,
+	SENSORS_SUBFEATURE_PWM_ENABLE = (SENSORS_FEATURE_PWM << 8) | 0x80,
+	SENSORS_SUBFEATURE_PWM_MODE,
+
 	SENSORS_SUBFEATURE_VID = SENSORS_FEATURE_VID << 8,
 
 	SENSORS_SUBFEATURE_INTRUSION_ALARM = SENSORS_FEATURE_INTRUSION << 8,
@@ -251,8 +285,42 @@ typedef enum sensors_subfeature_type {
 
 	SENSORS_SUBFEATURE_BEEP_ENABLE = SENSORS_FEATURE_BEEP_ENABLE << 8,
 
+	SENSORS_SUBFEATURE_FREQ_INPUT = SENSORS_FEATURE_FREQ << 8,
 	SENSORS_SUBFEATURE_UNKNOWN = INT_MAX,
 } sensors_subfeature_type;
+
+typedef enum sensors_quantity {
+	SENSORS_QUANTITY_UNKNOWN,
+	SENSORS_QUANTITY_NONE,
+	SENSORS_QUANTITY_BOOL,
+	SENSORS_QUANTITY_VOLTAGE,
+	SENSORS_QUANTITY_RPM,
+	SENSORS_QUANTITY_TEMP,
+	SENSORS_QUANTITY_POWER,
+	SENSORS_QUANTITY_INTERVAL,
+	SENSORS_QUANTITY_ENERGY,
+	SENSORS_QUANTITY_CURRENT,
+	SENSORS_QUANTITY_HUMIDITY,
+	SENSORS_QUANTITY_PWM,
+	SENSORS_QUANTITY_FREQ,
+	SENSORS_QUANTITY_MAX = SENSORS_QUANTITY_FREQ,
+} sensors_quantity;
+
+sensors_quantity sensors_get_subfeature_quantity(sensors_subfeature_type) __attribute__ ((const));
+const char * sensors_get_quantity_name(sensors_quantity) __attribute__ ((const));
+const char * sensors_get_quantity_unit(sensors_quantity) __attribute__ ((const));
+
+typedef enum sensors_temp_type {
+	SENSORS_TEMP_DISABLED,
+	SENSORS_TEMP_CPU_DIODE,
+	SENSORS_TEMP_TRANSISTOR,
+	SENSORS_TEMP_THERMAL_DIODE,
+	SENSORS_TEMP_THERMISTOR,
+	SENSORS_TEMP_AMD_AMDSI,
+	SENSORS_TEMP_INTEL_PECI,
+} sensors_temp_type;
+
+const char *sensors_temp_type_name(sensors_temp_type sens);
 
 /* Data about a single chip feature (or category leader) */
 struct sensors_feature {
@@ -288,26 +356,34 @@ typedef struct sensors_subfeature {
    more features are found NULL is returned.
    Do not try to change the returned structure; you will corrupt internal
    data structures. */
+SENSORS_DEPRECATED(const sensors_feature * sensors_get_features(const sensors_chip_name *name, int *nr));
 const sensors_feature *
-sensors_get_features(const sensors_chip_name *name, int *nr);
+sensors_get_features_r(sensors_config *config, const sensors_chip_name *name, int *nr);
 
 /* This returns all subfeatures of a given main feature. nr is an internally
    used variable. Set it to zero to start at the begin of the list. If no
    more features are found NULL is returned.
    Do not try to change the returned structure; you will corrupt internal
    data structures. */
+SENSORS_DEPRECATED(const sensors_subfeature * sensors_get_all_subfeatures(const sensors_chip_name *name,
+			    const sensors_feature *feature, int *nr));
 const sensors_subfeature *
-sensors_get_all_subfeatures(const sensors_chip_name *name,
-			    const sensors_feature *feature, int *nr);
+sensors_get_all_subfeatures_r(sensors_config *config,
+			      const sensors_chip_name *name,
+			      const sensors_feature *feature, int *nr);
 
 /* This returns the subfeature of the given type for a given main feature,
    if it exists, NULL otherwise.
    Do not try to change the returned structure; you will corrupt internal
    data structures. */
-const sensors_subfeature *
-sensors_get_subfeature(const sensors_chip_name *name,
+SENSORS_DEPRECATED(const sensors_subfeature * sensors_get_subfeature(const sensors_chip_name *name,
 		       const sensors_feature *feature,
-		       sensors_subfeature_type type);
+		       sensors_subfeature_type type));
+const sensors_subfeature *
+sensors_get_subfeature_r(sensors_config *config,
+			 const sensors_chip_name *name,
+			 const sensors_feature *feature,
+			 sensors_subfeature_type type);
 
 #ifdef __cplusplus
 }

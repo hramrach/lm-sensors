@@ -33,6 +33,8 @@
 #include "sensord.h"
 #include "lib/error.h"
 
+sensors_config *config;
+
 static int loadConfig(const char *cfgPath, int reload)
 {
 	int ret;
@@ -42,11 +44,12 @@ static int loadConfig(const char *cfgPath, int reload)
  	if (!cfgPath) {
  		if (reload) {
 			sensorLog(LOG_INFO, "configuration reloading");
-			sensors_cleanup();
+			sensors_cleanup_r(config);
+			config = NULL;
 		}
 
- 		ret = sensors_init(NULL);
- 		if (ret) {
+ 		config = sensors_init_r(NULL, &ret);
+ 		if (!config) {
  			sensorLog(LOG_ERR, "Error loading default"
  				  " configuration file: %s",
  				  sensors_strerror(ret));
@@ -64,10 +67,11 @@ static int loadConfig(const char *cfgPath, int reload)
 
 	if (reload) {
 		sensorLog(LOG_INFO, "configuration reloading");
-		sensors_cleanup();
+		sensors_cleanup_r(config);
+		config = NULL;
 	}
- 	ret = sensors_init(fp);
- 	if (ret) {
+ 	config = sensors_init_r(fp, &ret);
+ 	if (!config) {
  		sensorLog(LOG_ERR, "Error loading sensors configuration file"
 			  " %s: %s", cfgPath, sensors_strerror(ret));
  		fclose(fp);
@@ -100,6 +104,7 @@ int reloadLib(const char *cfgPath)
 int unloadLib(void)
 {
 	freeKnownChips();
-	sensors_cleanup();
+	sensors_cleanup_r(config);
+	config = NULL;
 	return 0;
 }

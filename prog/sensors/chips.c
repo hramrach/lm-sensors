@@ -36,7 +36,7 @@ static void scale_value(double *value, const char **prefixstr);
 
 static inline double deg_ctof(double cel)
 {
-	return cel * (9.0F / 5.0F) + 32.0F;
+	return cel * (9.0 / 5.0) + 32.0;
 }
 
 void print_chip_raw(const sensors_chip_name *name)
@@ -46,10 +46,11 @@ void print_chip_raw(const sensors_chip_name *name)
 	const sensors_subfeature *sub;
 	char *label;
 	double val;
+	int is_temp;
 
 	a = 0;
-	while ((feature = sensors_get_features(name, &a))) {
-		if (!(label = sensors_get_label(name, feature))) {
+	while ((feature = sensors_get_features_r(config, name, &a))) {
+		if (!(label = sensors_get_label_r(config, name, feature))) {
 			fprintf(stderr, "ERROR: Can't get label of feature "
 				"%s!\n", feature->name);
 			continue;
@@ -57,16 +58,18 @@ void print_chip_raw(const sensors_chip_name *name)
 		printf("%s:\n", label);
 
 		b = 0;
-		while ((sub = sensors_get_all_subfeatures(name, feature, &b))) {
+		while ((sub = sensors_get_all_subfeatures_r(config, name, feature, &b))) {
 			if (sub->flags & SENSORS_MODE_R) {
-				if ((err = sensors_get_value(name, sub->number,
+				is_temp = sensors_get_subfeature_quantity(sub->type) == SENSORS_QUANTITY_TEMP;
+
+				if ((err = sensors_get_value_r(config, name, sub->number,
 							     &val)))
 					fprintf(stderr, "ERROR: Can't get "
 						"value of subfeature %s: %s\n",
 						sub->name,
 						sensors_strerror(err));
 				else {
-					if (fahrenheit)
+					if (is_temp && fahrenheit)
 						val = deg_ctof(val);
 					printf("  %s: %.3f\n", sub->name, val);
 				}
@@ -84,49 +87,102 @@ void print_chip_json(const sensors_chip_name *name)
 	const sensors_subfeature *sub;
 	char *label;
 	double val;
+	int is_temp;
 
 	a = 0;
 	cnt = 0;
-	while ((feature = sensors_get_features(name, &a))) {
-		if (!(label = sensors_get_label(name, feature))) {
+	while ((feature = sensors_get_features_r(config, name, &a))) {
+		if (!(label = sensors_get_label_r(config, name, feature))) {
 			fprintf(stderr, "ERROR: Can't get label of feature "
 				"%s!\n", feature->name);
 			continue;
 		}
-		if (cnt > 0)
-			printf(",\n");
-		printf("      \"%s\":{\n", label);
+		if (cnt++)
+			printf(",");
+		subCnt = 0;
+		if (new_json) {
+			printf("\"%s\":{", feature->name);
+			if (strcmp(label, feature->name)) {
+				if (subCnt++)
+					printf(",");
+				printf("\"label\":\"%s\"", label);
+			}
+		} else
+			printf("\"%s\":{", label);
 
 		b = 0;
-		subCnt = 0;
-		while ((sub = sensors_get_all_subfeatures(name, feature, &b))) {
+		while ((sub = sensors_get_all_subfeatures_r(config, name, feature, &b))) {
+			char *fname = sub->name;
+			if (new_json) {
+				if (strlen(feature->name) < strlen(sub->name)) {
+					fname += strlen(feature->name);
+					if (*fname == '_') /* FIXME some sensors use other separator */
+						fname++;
+				}
+			}
 			if (sub->flags & SENSORS_MODE_R) {
-				if ((err = sensors_get_value(name, sub->number,
+				is_temp = sensors_get_subfeature_quantity(sub->type) == SENSORS_QUANTITY_TEMP;
+
+				if ((err = sensors_get_value_r(config, name, sub->number,
 							     &val))) {
 					fprintf(stderr, "ERROR: Can't get "
 						"value of subfeature %s: %s\n",
 						sub->name,
 						sensors_strerror(err));
 				} else {
-					if (subCnt > 0)
-						printf(",\n");
-					if (fahrenheit)
+					if (subCnt++)
+						printf(",");
+					if (is_temp && fahrenheit)
 						val = deg_ctof(val);
-					printf("         \"%s\": %.3f", sub->name, val);
-					subCnt++;
+					if (new_json) {
+						const char *unit = sensors_get_quantity_unit(sensors_get_subfeature_quantity(sub->type));
+						const char *quantity = sensors_get_quantity_name(sensors_get_subfeature_quantity(sub->type));
+						int quaCnt = 0;
+
+						printf("\"%s\":{", fname);
+
+						if (is_temp && fahrenheit)
+							unit = "°F";
+						if (strrchr(quantity, ' '))
+							quantity = strrchr(quantity, ' ') + 1;
+
+						if (sub->type == SENSORS_SUBFEATURE_TEMP_TYPE) {
+							if (quaCnt++)
+								printf(",");
+							printf("\"label\":\"%s\"", sensors_temp_type_name(val));
+						}
+
+						if (strlen(quantity)) {
+							if (quaCnt++)
+								printf(",");
+							printf("\"quantity\":\"%s\"", quantity);
+						}
+
+						if (strlen(unit)) {
+							if (quaCnt++)
+								printf(",");
+							printf("\"unit\":\"%s\"", unit);
+						}
+
+						if (quaCnt++)
+							printf(",");
+						printf("\"value\":%.16g", val);
+						printf("}");
+
+					} else {
+						printf("\"%s\":%f", fname, val);
+					}
 				}
 
 			} else {
-				printf("(%s)", label);
-				subCnt++;
+				if (subCnt++)
+					printf(",");
+				printf("\"%s\":NaN", fname);
 			}
 		}
 		free(label);
-		printf("\n      }");
-		cnt++;
+		printf("}");
 	}
-	if (cnt > 0)
-		printf("\n");
 }
 
 static const char hyst_str[] = "hyst";
@@ -143,7 +199,7 @@ static double get_value(const sensors_chip_name *name,
 	double val;
 	int err;
 
-	err = sensors_get_value(name, sub->number, &val);
+	err = sensors_get_value_r(config, name, sub->number, &val);
 	if (err) {
 		fprintf(stderr, "ERROR: Can't get value of subfeature %s: %s\n",
 			sub->name, sensors_strerror(err));
@@ -159,7 +215,7 @@ static int get_input_value(const sensors_chip_name *name,
 {
 	int err;
 
-	err = sensors_get_value(name, sub->number, val);
+	err = sensors_get_value_r(config, name, sub->number, val);
 	if (err && err != -SENSORS_ERR_ACCESS_R) {
 		fprintf(stderr, "ERROR: Can't get value of subfeature %s: %s\n",
 			sub->name, sensors_strerror(err));
@@ -175,8 +231,8 @@ static int get_label_size(const sensors_chip_name *name)
 	unsigned int max_size = 11;	/* 11 as minimum label width */
 
 	i = 0;
-	while ((iter = sensors_get_features(name, &i))) {
-		if ((label = sensors_get_label(name, iter)) &&
+	while ((iter = sensors_get_features_r(config, name, &i))) {
+		if ((label = sensors_get_label_r(config, name, iter)) &&
 		    strlen(label) > max_size)
 			max_size = strlen(label);
 		free(label);
@@ -265,7 +321,7 @@ static void get_sensor_limit_data(const sensors_chip_name *name,
 	const sensors_subfeature *sf;
 
 	for (; sfl->subfeature >= 0; sfl++) {
-		sf = sensors_get_subfeature(name, feature, sfl->subfeature);
+		sf = sensors_get_subfeature_r(config, name, feature, sfl->subfeature);
 		if (sf) {
 			if (sfl->alarm) {
 				/*
@@ -357,7 +413,7 @@ static void print_chip_temp(const sensors_chip_name *name,
 	char *label;
 	int i;
 
-	if (!(label = sensors_get_label(name, feature))) {
+	if (!(label = sensors_get_label_r(config, name, feature))) {
 		fprintf(stderr, "ERROR: Can't get label of feature %s!\n",
 			feature->name);
 		return;
@@ -365,12 +421,12 @@ static void print_chip_temp(const sensors_chip_name *name,
 	print_label(label, label_size);
 	free(label);
 
-	sf = sensors_get_subfeature(name, feature,
+	sf = sensors_get_subfeature_r(config, name, feature,
 				    SENSORS_SUBFEATURE_TEMP_FAULT);
 	if (sf && get_value(name, sf)) {
 		printf("   FAULT  ");
 	} else {
-		sf = sensors_get_subfeature(name, feature,
+		sf = sensors_get_subfeature_r(config, name, feature,
 					    SENSORS_SUBFEATURE_TEMP_INPUT);
 		if (sf && get_input_value(name, sf, &val) == 0) {
 			if (fahrenheit)
@@ -394,7 +450,7 @@ static void print_chip_temp(const sensors_chip_name *name,
 		     "%-4s = %+5.1f%s");
 
 	/* print out temperature sensor info */
-	sf = sensors_get_subfeature(name, feature,
+	sf = sensors_get_subfeature_r(config, name, feature,
 				    SENSORS_SUBFEATURE_TEMP_TYPE);
 	if (sf) {
 		int sens = (int)get_value(name, sf);
@@ -404,13 +460,7 @@ static void print_chip_temp(const sensors_chip_name *name,
 		if (sens > 1000)
 			sens = 4;
 
-		printf("  sensor = %s", sens == 0 ? "disabled" :
-		       sens == 1 ? "CPU diode" :
-		       sens == 2 ? "transistor" :
-		       sens == 3 ? "thermal diode" :
-		       sens == 4 ? "thermistor" :
-		       sens == 5 ? "AMD AMDSI" :
-		       sens == 6 ? "Intel PECI" : "unknown");
+		printf("  sensor = %s", sensors_temp_type_name(sens));
 	}
 	printf("\n");
 }
@@ -428,6 +478,8 @@ static const struct sensor_subfeature_list voltage_sensors[] = {
 	{ SENSORS_SUBFEATURE_IN_AVERAGE, NULL, 0, "avg" },
 	{ SENSORS_SUBFEATURE_IN_LOWEST, NULL, 0, "lowest" },
 	{ SENSORS_SUBFEATURE_IN_HIGHEST, NULL, 0, "highest" },
+	{ SENSORS_SUBFEATURE_IN_RATED_MIN, NULL, 0, "rated min" },
+	{ SENSORS_SUBFEATURE_IN_RATED_MAX, NULL, 0, "rated max" },
 	{ -1, NULL, 0, NULL }
 };
 
@@ -446,7 +498,7 @@ static void print_chip_in(const sensors_chip_name *name,
 	int sensor_count, alarm_count;
 	double val;
 
-	if (!(label = sensors_get_label(name, feature))) {
+	if (!(label = sensors_get_label_r(config, name, feature))) {
 		fprintf(stderr, "ERROR: Can't get label of feature %s!\n",
 			feature->name);
 		return;
@@ -454,7 +506,7 @@ static void print_chip_in(const sensors_chip_name *name,
 	print_label(label, label_size);
 	free(label);
 
-	sf = sensors_get_subfeature(name, feature,
+	sf = sensors_get_subfeature_r(config, name, feature,
 				    SENSORS_SUBFEATURE_IN_INPUT);
 	if (sf && get_input_value(name, sf, &val) == 0) {
 		scale_value(&val, &unit);
@@ -481,7 +533,7 @@ static void print_chip_fan(const sensors_chip_name *name,
 	double val;
 	char *label;
 
-	if (!(label = sensors_get_label(name, feature))) {
+	if (!(label = sensors_get_label_r(config, name, feature))) {
 		fprintf(stderr, "ERROR: Can't get label of feature %s!\n",
 			feature->name);
 		return;
@@ -489,12 +541,12 @@ static void print_chip_fan(const sensors_chip_name *name,
 	print_label(label, label_size);
 	free(label);
 
-	sf = sensors_get_subfeature(name, feature,
+	sf = sensors_get_subfeature_r(config, name, feature,
 				    SENSORS_SUBFEATURE_FAN_FAULT);
 	if (sf && get_value(name, sf))
 		printf("   FAULT");
 	else {
-		sf = sensors_get_subfeature(name, feature,
+		sf = sensors_get_subfeature_r(config, name, feature,
 					    SENSORS_SUBFEATURE_FAN_INPUT);
 		if (sf && get_input_value(name, sf, &val) == 0)
 			printf("%4.0f RPM", val);
@@ -502,11 +554,11 @@ static void print_chip_fan(const sensors_chip_name *name,
 			printf("     N/A");
 	}
 
-	sfmin = sensors_get_subfeature(name, feature,
+	sfmin = sensors_get_subfeature_r(config, name, feature,
 				       SENSORS_SUBFEATURE_FAN_MIN);
-	sfmax = sensors_get_subfeature(name, feature,
+	sfmax = sensors_get_subfeature_r(config, name, feature,
 				       SENSORS_SUBFEATURE_FAN_MAX);
-	sfdiv = sensors_get_subfeature(name, feature,
+	sfdiv = sensors_get_subfeature_r(config, name, feature,
 				       SENSORS_SUBFEATURE_FAN_DIV);
 	if (sfmin || sfmax || sfdiv) {
 		printf("  (");
@@ -524,11 +576,11 @@ static void print_chip_fan(const sensors_chip_name *name,
 		printf(")");
 	}
 
-	sf = sensors_get_subfeature(name, feature,
+	sf = sensors_get_subfeature_r(config, name, feature,
 				    SENSORS_SUBFEATURE_FAN_ALARM);
-	sfmin = sensors_get_subfeature(name, feature,
+	sfmin = sensors_get_subfeature_r(config, name, feature,
 				       SENSORS_SUBFEATURE_FAN_MIN_ALARM);
-	sfmax = sensors_get_subfeature(name, feature,
+	sfmax = sensors_get_subfeature_r(config, name, feature,
 				       SENSORS_SUBFEATURE_FAN_MAX_ALARM);
 	if ((sf && get_value(name, sf)) ||
 	    (sfmin && get_value(name, sfmin)) ||
@@ -584,6 +636,8 @@ static const struct sensor_subfeature_list power_common_sensors[] = {
 	{ SENSORS_SUBFEATURE_POWER_LCRIT, NULL, 0, "lcrit" },
 	{ SENSORS_SUBFEATURE_POWER_CRIT, NULL, 0, "crit" },
 	{ SENSORS_SUBFEATURE_POWER_CAP, NULL, 0, "cap" },
+	{ SENSORS_SUBFEATURE_POWER_RATED_MIN, NULL, 0, "rated min" },
+	{ SENSORS_SUBFEATURE_POWER_RATED_MAX, NULL, 0, "rated max" },
 	{ -1, NULL, 0, NULL }
 };
 
@@ -624,7 +678,7 @@ static void print_chip_power(const sensors_chip_name *name,
 	const char *unit;
 	int i;
 
-	if (!(label = sensors_get_label(name, feature))) {
+	if (!(label = sensors_get_label_r(config, name, feature))) {
 		fprintf(stderr, "ERROR: Can't get label of feature %s!\n",
 			feature->name);
 		return;
@@ -641,7 +695,7 @@ static void print_chip_power(const sensors_chip_name *name,
 	 * If both instantaneous power and average power are supported,
 	 * average power is displayed as limit.
 	 */
-	sf = sensors_get_subfeature(name, feature,
+	sf = sensors_get_subfeature_r(config, name, feature,
 				    SENSORS_SUBFEATURE_POWER_INPUT);
 	get_sensor_limit_data(name, feature,
 			      sf ? power_inst_sensors : power_avg_sensors,
@@ -650,7 +704,7 @@ static void print_chip_power(const sensors_chip_name *name,
 	get_sensor_limit_data(name, feature, power_common_sensors,
 			      sensors, &sensor_count, alarms, &alarm_count);
 	if (!sf)
-		sf = sensors_get_subfeature(name, feature,
+		sf = sensors_get_subfeature_r(config, name, feature,
 					    SENSORS_SUBFEATURE_POWER_AVERAGE);
 
 	if (sf && get_input_value(name, sf, &val) == 0) {
@@ -692,7 +746,7 @@ static void print_chip_energy(const sensors_chip_name *name,
 	char *label;
 	const char *unit;
 
-	if (!(label = sensors_get_label(name, feature))) {
+	if (!(label = sensors_get_label_r(config, name, feature))) {
 		fprintf(stderr, "ERROR: Can't get label of feature %s!\n",
 			feature->name);
 		return;
@@ -700,7 +754,7 @@ static void print_chip_energy(const sensors_chip_name *name,
 	print_label(label, label_size);
 	free(label);
 
-	sf = sensors_get_subfeature(name, feature,
+	sf = sensors_get_subfeature_r(config, name, feature,
 				    SENSORS_SUBFEATURE_ENERGY_INPUT);
 	if (sf && get_input_value(name, sf, &val) == 0) {
 		scale_value(&val, &unit);
@@ -720,13 +774,13 @@ static void print_chip_vid(const sensors_chip_name *name,
 	const sensors_subfeature *subfeature;
 	double vid;
 
-	subfeature = sensors_get_subfeature(name, feature,
+	subfeature = sensors_get_subfeature_r(config, name, feature,
 					    SENSORS_SUBFEATURE_VID);
 	if (!subfeature)
 		return;
 
-	if ((label = sensors_get_label(name, feature))
-	 && !sensors_get_value(name, subfeature->number, &vid)) {
+	if ((label = sensors_get_label_r(config, name, feature))
+	 && !sensors_get_value_r(config, name, subfeature->number, &vid)) {
 		print_label(label, label_size);
 		printf("%+6.3f V\n", vid);
 	}
@@ -741,17 +795,70 @@ static void print_chip_humidity(const sensors_chip_name *name,
 	const sensors_subfeature *subfeature;
 	double humidity;
 
-	subfeature = sensors_get_subfeature(name, feature,
+	subfeature = sensors_get_subfeature_r(config, name, feature,
 					    SENSORS_SUBFEATURE_HUMIDITY_INPUT);
 	if (!subfeature)
 		return;
 
-	if ((label = sensors_get_label(name, feature))
-	 && !sensors_get_value(name, subfeature->number, &humidity)) {
+	if ((label = sensors_get_label_r(config, name, feature))
+	 && !sensors_get_value_r(config, name, subfeature->number, &humidity)) {
 		print_label(label, label_size);
 		printf("%6.1f %%RH\n", humidity);
 	}
 	free(label);
+}
+
+static void print_chip_pwm(const sensors_chip_name *name,
+			   const sensors_feature *feature,
+			   int label_size)
+{
+	const sensors_subfeature *sfio, *sffreq, *sfenable, *sfmode;
+	char *label;
+	double val;
+
+	if (!(label = sensors_get_label_r(config, name, feature))) {
+		fprintf(stderr, "ERROR: Can't get label of feature %s!\n",
+			feature->name);
+		return;
+	}
+	print_label(label, label_size);
+	free(label);
+
+	sfio = sensors_get_subfeature_r(config, name, feature,
+				      SENSORS_SUBFEATURE_PWM_IO);
+	if (sfio && !get_input_value(name, sfio, &val))
+		printf("    %3.0f%%", val);
+	else
+		printf("     N/A");
+
+	sffreq = sensors_get_subfeature_r(config, name, feature,
+					SENSORS_SUBFEATURE_PWM_FREQ);
+	sfmode = sensors_get_subfeature_r(config, name, feature,
+					 SENSORS_SUBFEATURE_PWM_MODE);
+	if (sffreq || sfmode) {
+		printf("  (");
+		if (sffreq)
+			printf("freq = %.0f Hz", get_value(name, sffreq));
+
+		if (sfmode) {
+			if (!get_input_value(name, sfmode, &val))
+				printf("%smode = %s", sffreq ? ", " : "",
+				       (int) val ? "pwm" : "dc");
+			else
+				printf("%smode = N/A", sffreq ? ", " : "");
+		}
+
+		printf(")");
+	}
+
+	sfenable = sensors_get_subfeature_r(config, name, feature,
+					  SENSORS_SUBFEATURE_PWM_ENABLE);
+
+	if (sfenable && !get_input_value(name, sfenable, &val) &&
+	    (int) val == 1)
+		printf("  MANUAL CONTROL");
+
+	printf("\n");
 }
 
 static void print_chip_beep_enable(const sensors_chip_name *name,
@@ -762,13 +869,13 @@ static void print_chip_beep_enable(const sensors_chip_name *name,
 	const sensors_subfeature *subfeature;
 	double beep_enable;
 
-	subfeature = sensors_get_subfeature(name, feature,
+	subfeature = sensors_get_subfeature_r(config, name, feature,
 					    SENSORS_SUBFEATURE_BEEP_ENABLE);
 	if (!subfeature)
 		return;
 
-	if ((label = sensors_get_label(name, feature))
-	 && !sensors_get_value(name, subfeature->number, &beep_enable)) {
+	if ((label = sensors_get_label_r(config, name, feature))
+	 && !sensors_get_value_r(config, name, subfeature->number, &beep_enable)) {
 		print_label(label, label_size);
 		printf("%s\n", beep_enable ? "enabled" : "disabled");
 	}
@@ -788,6 +895,8 @@ static const struct sensor_subfeature_list current_sensors[] = {
 	{ SENSORS_SUBFEATURE_CURR_AVERAGE, NULL, 0, "avg" },
 	{ SENSORS_SUBFEATURE_CURR_LOWEST, NULL, 0, "lowest" },
 	{ SENSORS_SUBFEATURE_CURR_HIGHEST, NULL, 0, "highest" },
+	{ SENSORS_SUBFEATURE_CURR_RATED_MIN, NULL, 0, "rated min" },
+	{ SENSORS_SUBFEATURE_CURR_RATED_MAX, NULL, 0, "rated max" },
 	{ -1, NULL, 0, NULL }
 };
 
@@ -806,7 +915,7 @@ static void print_chip_curr(const sensors_chip_name *name,
 	struct sensor_subfeature_data alarms[NUM_CURR_ALARMS];
 	int sensor_count, alarm_count;
 
-	if (!(label = sensors_get_label(name, feature))) {
+	if (!(label = sensors_get_label_r(config, name, feature))) {
 		fprintf(stderr, "ERROR: Can't get label of feature %s!\n",
 			feature->name);
 		return;
@@ -814,7 +923,7 @@ static void print_chip_curr(const sensors_chip_name *name,
 	print_label(label, label_size);
 	free(label);
 
-	sf = sensors_get_subfeature(name, feature,
+	sf = sensors_get_subfeature_r(config, name, feature,
 				    SENSORS_SUBFEATURE_CURR_INPUT);
 	if (sf && get_input_value(name, sf, &val) == 0) {
 		scale_value(&val, &unit);
@@ -833,6 +942,35 @@ static void print_chip_curr(const sensors_chip_name *name,
 	printf("\n");
 }
 
+static void print_chip_freq(const sensors_chip_name *name,
+			    const sensors_feature *feature,
+			    int label_size)
+{
+	const sensors_subfeature *sf;
+	double val;
+	char *label;
+	const char *unit;
+
+	if (!(label = sensors_get_label_r(config, name, feature))) {
+		fprintf(stderr, "ERROR: Can't get label of feature %s!\n",
+			feature->name);
+		return;
+	}
+	print_label(label, label_size);
+	free(label);
+
+	sf = sensors_get_subfeature_r(config, name, feature,
+				    SENSORS_SUBFEATURE_FREQ_INPUT);
+	if (sf && get_input_value(name, sf, &val) == 0) {
+		scale_value(&val, &unit);
+		printf("%4.0f %sHz%*s", val, unit, 2 - (int)strlen(unit), "");
+	} else {
+		printf("     N/A  ");
+	}
+
+	printf("\n");
+}
+
 static void print_chip_intrusion(const sensors_chip_name *name,
 				 const sensors_feature *feature,
 				 int label_size)
@@ -841,13 +979,13 @@ static void print_chip_intrusion(const sensors_chip_name *name,
 	const sensors_subfeature *subfeature;
 	double alarm;
 
-	subfeature = sensors_get_subfeature(name, feature,
+	subfeature = sensors_get_subfeature_r(config, name, feature,
 					    SENSORS_SUBFEATURE_INTRUSION_ALARM);
 	if (!subfeature)
 		return;
 
-	if ((label = sensors_get_label(name, feature))
-	 && !sensors_get_value(name, subfeature->number, &alarm)) {
+	if ((label = sensors_get_label_r(config, name, feature))
+	 && !sensors_get_value_r(config, name, subfeature->number, &alarm)) {
 		print_label(label, label_size);
 		printf("%s\n", alarm ? "ALARM" : "OK");
 	}
@@ -862,7 +1000,7 @@ void print_chip(const sensors_chip_name *name)
 	label_size = get_label_size(name);
 
 	i = 0;
-	while ((feature = sensors_get_features(name, &i))) {
+	while ((feature = sensors_get_features_r(config, name, &i))) {
 		switch (feature->type) {
 		case SENSORS_FEATURE_TEMP:
 			print_chip_temp(name, feature, label_size);
@@ -893,6 +1031,12 @@ void print_chip(const sensors_chip_name *name)
 			break;
 		case SENSORS_FEATURE_HUMIDITY:
 			print_chip_humidity(name, feature, label_size);
+			break;
+		case SENSORS_FEATURE_FREQ:
+			print_chip_freq(name, feature, label_size);
+			break;
+		case SENSORS_FEATURE_PWM:
+			print_chip_pwm(name, feature, label_size);
 			break;
 		default:
 			continue;

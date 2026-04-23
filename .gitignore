@@ -22,8 +22,13 @@ lib/test/test-scanner
 
 # Generated source code
 lib/conf-lex.c
+lib/conf-lex.h
 lib/conf-parse.c
 lib/conf-parse.h
 
 # Patching artifacts
 *.orig
+*.rej
+
+# editor backup files
+*~

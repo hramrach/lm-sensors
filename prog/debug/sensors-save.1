@@ -1,0 +1,50 @@
+.\" Copyright 1999 Frodo Looijaard <frodol@dds.nl>
+.\" Copyright (C) 2007-2012 Jean Delvare <jdelvare@suse.de>
+.\" sensors is distributed under the GPL
+.\"
+.\" Permission is granted to make and distribute verbatim copies of this
+.\" manual provided the copyright notice and this permission notice are
+.\" preserved on all copies.
+.\"
+.\" Permission is granted to copy and distribute modified versions of this
+.\" manual under the conditions for verbatim copying, provided that the
+.\" entire resulting derived work is distributed under the terms of a
+.\" permission notice identical to this one
+.\" 
+.\" Since the Linux kernel and libraries are constantly changing, this
+.\" manual page may be incorrect or out-of-date.  The author(s) assume no
+.\" responsibility for errors or omissions, or for damages resulting from
+.\" the use of the information contained herein.  The author(s) may not
+.\" have taken the same level of care in the production of this manual,
+.\" which is licensed free of charge, as they might when working
+.\" professionally.
+.\" 
+.\" Formatted or processed versions of this manual, if unaccompanied by
+.\" the source, must acknowledge the copyright and authors of this work.
+.\"
+.TH sensors-save 1  "January 2024" "lm-sensors 3" "Linux User's Manual"
+.SH NAME
+sensors-save \- save sensor data
+.SH SYNOPSIS
+.B sensors-save [ -q ]
+.I location
+
+.SH DESCRIPTION
+.B location
+directory where sensor data is saved. Saved data can then be used by specifying
+.I location
+in the
+.I SENSORS_SYSFS_ROOT
+environment variable.
+.br
+Saved data can be used for diagnosing problems in data interpretation and other testing.
+
+.SH OPTIONS
+.IP "-q"
+Do not print file names as they are copied.
+
+.SH AUTHOR
+Michal Suchánek and the lm_sensors group
+https://hwmon.wiki.kernel.org/lm_sensors
+
+

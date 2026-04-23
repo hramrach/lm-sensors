@@ -75,8 +75,9 @@ static char *sysfs_read_attr(const char *device, const char *attr)
  * Returns 0 on success (all calls returned 0), a positive errno for
  * local errors, or a negative error value if any call fails.
  */
-static int sysfs_foreach_classdev(const char *class_name,
-				   int (*func)(const char *, const char *))
+static int sysfs_foreach_classdev(sensors_config *config, const char *class_name,
+				   int (*func)(sensors_config *config,
+					       const char *, const char *))
 {
 	char path[NAME_MAX];
 	int path_off, ret;
@@ -84,7 +85,7 @@ static int sysfs_foreach_classdev(const char *class_name,
 	struct dirent *ent;
 
 	path_off = snprintf(path, NAME_MAX, "%s/class/%s",
-			    sensors_sysfs_mount, class_name);
+			    config->sysfs_mount, class_name);
 	if (!(dir = opendir(path)))
 		return errno;
 
@@ -95,7 +96,7 @@ static int sysfs_foreach_classdev(const char *class_name,
 
 		snprintf(path + path_off, NAME_MAX - path_off, "/%s",
 			 ent->d_name);
-		ret = func(path, ent->d_name);
+		ret = func(config, path, ent->d_name);
 	}
 
 	closedir(dir);
@@ -107,8 +108,9 @@ static int sysfs_foreach_classdev(const char *class_name,
  * Returns 0 on success (all calls returned 0), a positive errno for
  * local errors, or a negative error value if any call fails.
  */
-static int sysfs_foreach_busdev(const char *bus_type,
-				 int (*func)(const char *, const char *))
+static int sysfs_foreach_busdev(sensors_config *config, const char *bus_type,
+				 int (*func)(sensors_config *config,
+					     const char *, const char *))
 {
 	char path[NAME_MAX];
 	int path_off, ret;
@@ -116,7 +118,7 @@ static int sysfs_foreach_busdev(const char *bus_type,
 	struct dirent *ent;
 
 	path_off = snprintf(path, NAME_MAX, "%s/bus/%s/devices",
-			    sensors_sysfs_mount, bus_type);
+			    config->sysfs_mount, bus_type);
 	if (!(dir = opendir(path)))
 		return errno;
 
@@ -127,7 +129,7 @@ static int sysfs_foreach_busdev(const char *bus_type,
 
 		snprintf(path + path_off, NAME_MAX - path_off, "/%s",
 			 ent->d_name);
-		ret = func(path, ent->d_name);
+		ret = func(config, path, ent->d_name);
 	}
 
 	closedir(dir);
@@ -136,25 +138,9 @@ static int sysfs_foreach_busdev(const char *bus_type,
 
 /****************************************************************************/
 
-char sensors_sysfs_mount[NAME_MAX];
-
 static
 int get_type_scaling(sensors_subfeature_type type)
 {
-	/* Multipliers for subfeatures */
-	switch (type & 0xFF80) {
-	case SENSORS_SUBFEATURE_IN_INPUT:
-	case SENSORS_SUBFEATURE_TEMP_INPUT:
-	case SENSORS_SUBFEATURE_CURR_INPUT:
-	case SENSORS_SUBFEATURE_HUMIDITY_INPUT:
-		return 1000;
-	case SENSORS_SUBFEATURE_FAN_INPUT:
-		return 1;
-	case SENSORS_SUBFEATURE_POWER_AVERAGE:
-	case SENSORS_SUBFEATURE_ENERGY_INPUT:
-		return 1000000;
-	}
-
 	/* Multipliers for second class subfeatures
 	   that need their own multiplier */
 	switch (type) {
@@ -162,9 +148,112 @@ int get_type_scaling(sensors_subfeature_type type)
 	case SENSORS_SUBFEATURE_VID:
 	case SENSORS_SUBFEATURE_TEMP_OFFSET:
 		return 1000;
+	case SENSORS_SUBFEATURE_PWM_IO:
+		return 2.55;
 	default:
-		return 1;
+		break;
 	}
+
+	/* Multipliers for subfeatures */
+	switch (type & 0xFF80) {
+	case SENSORS_SUBFEATURE_IN_INPUT:
+	case SENSORS_SUBFEATURE_TEMP_INPUT:
+	case SENSORS_SUBFEATURE_CURR_INPUT:
+	case SENSORS_SUBFEATURE_HUMIDITY_INPUT:
+		return 1000;
+	case SENSORS_SUBFEATURE_POWER_AVERAGE:
+	case SENSORS_SUBFEATURE_ENERGY_INPUT:
+		return 1000000;
+	}
+
+	return 1;
+}
+
+sensors_quantity sensors_get_subfeature_quantity(sensors_subfeature_type type)
+{
+	/* Second class subfeatures
+	   that need their own handling */
+	switch (type) {
+		case SENSORS_SUBFEATURE_FAN_DIV:
+		case SENSORS_SUBFEATURE_FAN_PULSES:
+		case SENSORS_SUBFEATURE_TEMP_TYPE:
+		case SENSORS_SUBFEATURE_TEMP_OFFSET:
+		case SENSORS_SUBFEATURE_PWM_MODE:
+			return SENSORS_QUANTITY_NONE;
+		case SENSORS_SUBFEATURE_POWER_AVERAGE_INTERVAL:
+			return SENSORS_QUANTITY_INTERVAL;
+		case SENSORS_SUBFEATURE_PWM_FREQ:
+			return SENSORS_QUANTITY_FREQ;
+		default:
+			break;
+	}
+
+	/* Generic subfeatures groups */
+	switch (type & 0xFF80) {
+		case SENSORS_SUBFEATURE_IN_ALARM:
+		case SENSORS_SUBFEATURE_FAN_ALARM:
+		case SENSORS_SUBFEATURE_TEMP_ALARM:
+		case SENSORS_SUBFEATURE_POWER_AVERAGE_INTERVAL:
+		case SENSORS_SUBFEATURE_CURR_ALARM:
+		case SENSORS_SUBFEATURE_PWM_ENABLE:
+		case SENSORS_SUBFEATURE_INTRUSION_ALARM:
+		case SENSORS_SUBFEATURE_BEEP_ENABLE:
+			return SENSORS_QUANTITY_BOOL;
+		case SENSORS_SUBFEATURE_VID: /* reported in mV and scaled */
+		case SENSORS_SUBFEATURE_IN_INPUT:
+			return SENSORS_QUANTITY_VOLTAGE;
+		case SENSORS_SUBFEATURE_FAN_INPUT:
+			return SENSORS_QUANTITY_RPM;
+		case SENSORS_SUBFEATURE_TEMP_INPUT:
+			return SENSORS_QUANTITY_TEMP;
+		case SENSORS_SUBFEATURE_POWER_AVERAGE:
+			return SENSORS_QUANTITY_POWER;
+		case SENSORS_SUBFEATURE_ENERGY_INPUT:
+			return SENSORS_QUANTITY_ENERGY;
+		case SENSORS_SUBFEATURE_CURR_INPUT:
+			return SENSORS_QUANTITY_CURRENT;
+		case SENSORS_SUBFEATURE_HUMIDITY_INPUT:
+			return SENSORS_QUANTITY_VOLTAGE;
+		case SENSORS_SUBFEATURE_PWM_IO:
+			return SENSORS_QUANTITY_PWM;
+		case SENSORS_SUBFEATURE_FREQ_INPUT:
+			return SENSORS_QUANTITY_FREQ;
+	}
+
+	return SENSORS_QUANTITY_UNKNOWN;
+}
+
+static struct {
+	const char * name;
+	const char * unit;
+} quantity_names[SENSORS_QUANTITY_MAX + 1] = {
+	{"", ""},
+	{"", ""},
+	{"boolean", ""},
+	{"voltage", "V"},
+	{"rotation speed", "RPM"},
+	{"temperature", "°C"},
+	{"power", "W"},
+	{"time interval", "s"},
+	{"energy", "J"},
+	{"electric current", "A"},
+	{"humidity", "%RH"},
+	{"pwm", "%"},
+	{"frequency", "Hz"},
+};
+
+const char *sensors_get_quantity_name(sensors_quantity quant)
+{
+	if (quant > SENSORS_QUANTITY_MAX)
+		return NULL;
+	return quantity_names[quant].name;
+}
+
+const char *sensors_get_quantity_unit(sensors_quantity quant)
+{
+	if (quant > SENSORS_QUANTITY_MAX)
+		return NULL;
+	return quantity_names[quant].unit;
 }
 
 static
@@ -181,8 +270,16 @@ char *get_feature_name(sensors_feature_type ftype, char *sfname)
 	case SENSORS_FEATURE_CURR:
 	case SENSORS_FEATURE_HUMIDITY:
 	case SENSORS_FEATURE_INTRUSION:
+	case SENSORS_FEATURE_FREQ:
 		underscore = strchr(sfname, '_');
 		name = strndup(sfname, underscore - sfname);
+		if (!name)
+			sensors_fatal_error(__func__, "Out of memory");
+
+		break;
+	case SENSORS_FEATURE_PWM:
+		/* Not all pwm subfeatures have a underscore in there name */
+		name = strndup(sfname, 4);
 		if (!name)
 			sensors_fatal_error(__func__, "Out of memory");
 
@@ -251,6 +348,8 @@ static const struct subfeature_type_match in_matches[] = {
 	{ "lcrit_alarm", SENSORS_SUBFEATURE_IN_LCRIT_ALARM },
 	{ "crit_alarm", SENSORS_SUBFEATURE_IN_CRIT_ALARM },
 	{ "beep", SENSORS_SUBFEATURE_IN_BEEP },
+	{ "rated_min", SENSORS_SUBFEATURE_IN_RATED_MIN },
+	{ "rated_max", SENSORS_SUBFEATURE_IN_RATED_MAX },
 	{ NULL, 0 }
 };
 
@@ -288,6 +387,8 @@ static const struct subfeature_type_match power_matches[] = {
 	{ "crit_alarm", SENSORS_SUBFEATURE_POWER_CRIT_ALARM },
 	{ "lcrit_alarm", SENSORS_SUBFEATURE_POWER_LCRIT_ALARM },
 	{ "average_interval", SENSORS_SUBFEATURE_POWER_AVERAGE_INTERVAL },
+	{ "rated_min", SENSORS_SUBFEATURE_POWER_RATED_MIN },
+	{ "rated_max", SENSORS_SUBFEATURE_POWER_RATED_MAX },
 	{ NULL, 0 }
 };
 
@@ -311,11 +412,20 @@ static const struct subfeature_type_match curr_matches[] = {
 	{ "lcrit_alarm", SENSORS_SUBFEATURE_CURR_LCRIT_ALARM },
 	{ "crit_alarm", SENSORS_SUBFEATURE_CURR_CRIT_ALARM },
 	{ "beep", SENSORS_SUBFEATURE_CURR_BEEP },
+	{ "rated_min", SENSORS_SUBFEATURE_CURR_RATED_MIN },
+	{ "rated_max", SENSORS_SUBFEATURE_CURR_RATED_MAX },
 	{ NULL, 0 }
 };
 
 static const struct subfeature_type_match humidity_matches[] = {
 	{ "input", SENSORS_SUBFEATURE_HUMIDITY_INPUT },
+	{ NULL, 0 }
+};
+
+static const struct subfeature_type_match pwm_matches[] = {
+	{ "enable", SENSORS_SUBFEATURE_PWM_ENABLE },
+	{ "mode", SENSORS_SUBFEATURE_PWM_MODE },
+	{ "freq", SENSORS_SUBFEATURE_PWM_FREQ },
 	{ NULL, 0 }
 };
 
@@ -329,6 +439,11 @@ static const struct subfeature_type_match intrusion_matches[] = {
 	{ "beep", SENSORS_SUBFEATURE_INTRUSION_BEEP },
 	{ NULL, 0 }
 };
+
+static const struct subfeature_type_match freq_matches[] = {
+	{ "input", SENSORS_SUBFEATURE_FREQ_INPUT },
+	{ NULL, 0 }
+};
 static struct feature_type_match matches[] = {
 	{ "temp%d%c", temp_matches },
 	{ "in%d%c", in_matches },
@@ -339,6 +454,8 @@ static struct feature_type_match matches[] = {
 	{ "energy%d%c", energy_matches },
 	{ "intrusion%d%c", intrusion_matches },
 	{ "humidity%d%c", humidity_matches },
+	{ "freq%d%c", freq_matches },
+	{ "pwm%d%c", pwm_matches },
 };
 
 /* Return the subfeature type and channel number based on the subfeature
@@ -356,9 +473,15 @@ sensors_subfeature_type sensors_subfeature_get_type(const char *name, int *nr)
 		return SENSORS_SUBFEATURE_BEEP_ENABLE;
 	}
 
-	for (i = 0; i < ARRAY_SIZE(matches); i++)
-		if ((count = sscanf(name, matches[i].name, nr, &c)))
+	for (i = 0; i < ARRAY_SIZE(matches); i++) {
+		if ((count = sscanf(name, matches[i].name, nr, &c))) {
+			/* Needed for matching pwm[1-*] */
+			if (count == 1 && matches[i].submatches == pwm_matches)
+				return SENSORS_SUBFEATURE_PWM_IO;
+
 			break;
+		}
+	}
 
 	if (i == ARRAY_SIZE(matches) || count != 2 || c != '_')
 		return SENSORS_SUBFEATURE_UNKNOWN;  /* no match */
@@ -401,11 +524,11 @@ static int sensors_compute_max_sf(void)
 
 static int sensors_get_attr_mode(const char *device, const char *attr)
 {
-	char path[NAME_MAX];
+	char path[NAME_MAX + 2];
 	struct stat st;
 	int mode = 0;
 
-	snprintf(path, NAME_MAX, "%s/%s", device, attr);
+	snprintf(path, NAME_MAX + 2, "%s/%s", device, attr);
 	if (!stat(path, &st)) {
 		if (st.st_mode & S_IRUSR)
 			mode |= SENSORS_MODE_R;
@@ -468,6 +591,7 @@ static int sensors_read_dynamic_chip(sensors_chip_features *chip,
 		case SENSORS_FEATURE_ENERGY:
 		case SENSORS_FEATURE_CURR:
 		case SENSORS_FEATURE_HUMIDITY:
+		case SENSORS_FEATURE_PWM:
 			nr--;
 			break;
 		default:
@@ -603,21 +727,47 @@ exit_free:
 }
 
 /* returns !0 if sysfs filesystem was found, 0 otherwise */
-int sensors_init_sysfs(void)
+int sensors_init_sysfs(sensors_config *config)
 {
 	struct statfs statfsbuf;
+	struct stat statbuf;
+	const char *sysfs_root_env = getenv("SENSORS_SYSFS_ROOT");
+	const char *hwmon_subdir = "/class/hwmon";
+	char *hwmon_path;
+	size_t length;
+	int result;
 
-	snprintf(sensors_sysfs_mount, NAME_MAX, "%s", "/sys");
-	if (statfs(sensors_sysfs_mount, &statfsbuf) < 0
-	 || statfsbuf.f_type != SYSFS_MAGIC)
+	if (sysfs_root_env)
+		config->sysfs_mount = sysfs_root_env;
+	else
+		config->sysfs_mount = "/sys";
+
+	if (statfs(config->sysfs_mount, &statfsbuf) < 0
+	 || statfsbuf.f_type != SYSFS_MAGIC) {
+		if (sysfs_root_env)
+			fprintf(stderr, "%s: Not a sysfs mount.\n", config->sysfs_mount);
+		else
+			return 0;
+	}
+
+	length = strlen(config->sysfs_mount) + strlen(hwmon_subdir) + 1;
+	hwmon_path = malloc(length);
+	if (!hwmon_path)
 		return 0;
 
+	snprintf(hwmon_path, length, "%s%s", config->sysfs_mount, hwmon_subdir);
+	result = !stat(hwmon_path, &statbuf) && ((statbuf.st_mode & S_IFMT) == S_IFDIR);
+	if (!result)
+		fprintf(stderr, "%s: No sensors at %s.\n", config->sysfs_mount, hwmon_path);
+
+	free(hwmon_path);
 	return 1;
 }
 
-static int classify_device(const char *dev_name,
-                           const char *subsys,
-                           sensors_chip_features *entry)
+static int classify_device(sensors_config *config,
+			   const char *dev_name,
+			   const char *subsys,
+			   sensors_chip_features *entry)
 {
 	int domain, bus, slot, fn, vendor, product, id;
 	char bus_path[NAME_MAX];
@@ -635,7 +785,7 @@ static int classify_device(const char *dev_name,
 			entry->chip.bus.type = SENSORS_BUS_TYPE_I2C;
 			snprintf(bus_path, sizeof(bus_path),
 				"%s/class/i2c-adapter/i2c-%d/device",
-				sensors_sysfs_mount, entry->chip.bus.nr);
+				config->sysfs_mount, entry->chip.bus.nr);
 
 			if ((bus_attr = sysfs_read_attr(bus_path, "name"))) {
 				if (!strncmp(bus_attr, "ISA ", 4)) {
@@ -663,8 +813,9 @@ static int classify_device(const char *dev_name,
 	if ((!subsys || !strcmp(subsys, "platform") ||
 			!strcmp(subsys, "of_platform"))) {
 		/* must be new ISA (platform driver) */
-		if (sscanf(dev_name, "%*[a-zA-Z0-9_]%*1[.:]%d", &entry->chip.addr) != 1)
-			entry->chip.addr = 0;
+		if (sscanf(dev_name, "%*[a-zA-Z0-9_]%*1[.:]%d", &entry->chip.addr) == 1);
+		else if (sscanf(dev_name, "%x.%*s", &entry->chip.addr) == 1);
+		else entry->chip.addr = 0;
 		entry->chip.bus.type = SENSORS_BUS_TYPE_ISA;
 		entry->chip.bus.nr = 0;
 	} else if (subsys && !strcmp(subsys, "acpi")) {
@@ -692,6 +843,13 @@ static int classify_device(const char *dev_name,
 		entry->chip.addr = (bus << 8) + (slot << 4) + fn;
 		entry->chip.bus.type = SENSORS_BUS_TYPE_SCSI;
 		entry->chip.bus.nr = domain;
+	} else
+	if (subsys && !strcmp(subsys, "sdio") &&
+	    sscanf(dev_name, "mmc%hx:%x:%x", &entry->chip.bus.nr, &slot, &fn) == 3) {
+		/* mmc host(bus), address, function */
+		/* adapter(host), channel(bus), id(target), lun */
+		entry->chip.addr = (slot << 3) + fn;
+		entry->chip.bus.type = SENSORS_BUS_TYPE_SDIO;
 	} else {
 		/* Unknown device */
 		ret = 0;
@@ -700,9 +858,29 @@ static int classify_device(const char *dev_name,
 	return ret;
 }
 
-static int find_bus_type(const char *dev_path,
-                         const char *dev_name,
-                         sensors_chip_features *entry)
+/* realpath(3) that returns NULL for a path that isn't a symlink.
+   This is needed to deal with devices that have a "device" sysfs
+   entry that has the device ID, such as SDIO devices. */
+static char* realpath_no_symlink(const char *restrict path,
+				 char *restrict resolved_path)
+{
+	struct stat st;
+
+	if (lstat(path, &st) < 0)
+		return NULL;
+
+	if (!S_ISLNK(st.st_mode)) {
+		errno = -EINVAL;
+		return NULL;
+	}
+
+	return realpath(path, resolved_path);
+}
+
+static int find_bus_type(sensors_config *config,
+			 const char *dev_path,
+			 const char *dev_name,
+			 sensors_chip_features *entry)
 {
 	char linkpath[NAME_MAX];
 	char subsys_path[NAME_MAX], *subsys;
@@ -736,11 +914,11 @@ static int find_bus_type(const char *dev_path,
 			subsys_path[sub_len] = '\0';
 			subsys = strrchr(subsys_path, '/') + 1;
 		}
-		ret = classify_device(dev_name, subsys, entry);
+		ret = classify_device(config, dev_name, subsys, entry);
 		if (!ret) {
 			snprintf(linkpath, NAME_MAX, "%s/device", my_dev_path);
 			free(my_dev_path);
-			my_dev_path = realpath(linkpath, NULL);
+			my_dev_path = realpath_no_symlink(linkpath, NULL);
 			if (my_dev_path != NULL)
 				dev_name = strrchr(my_dev_path, '/') + 1;
 			else if (errno == ENOMEM)
@@ -754,7 +932,8 @@ static int find_bus_type(const char *dev_path,
 }
 
 /* returns: number of devices added (0 or 1) if successful, <0 otherwise */
-static int sensors_read_one_sysfs_chip(const char *dev_path,
+static int sensors_read_one_sysfs_chip(sensors_config *config,
+				       const char *dev_path,
 				       const char *dev_name,
 				       const char *hwmon_path)
 {
@@ -773,7 +952,7 @@ static int sensors_read_one_sysfs_chip(const char *dev_path,
 	if (dev_path == NULL) {
 		virtual = 1;
 	} else {
-		ret = find_bus_type(dev_path, dev_name, &entry);
+		ret = find_bus_type(config, dev_path, dev_name, &entry);
 		if (ret == 0) {
 			virtual = 1;
 			ret = 1;
@@ -807,30 +986,31 @@ exit_free:
 	return ret;
 }
 
-static int sensors_add_hwmon_device_compat(const char *path,
+static int sensors_add_hwmon_device_compat(sensors_config *config,
+					   const char *path,
 					   const char *dev_name)
 {
 	int err;
 
-	err = sensors_read_one_sysfs_chip(path, dev_name, path);
+	err = sensors_read_one_sysfs_chip(config, path, dev_name, path);
 	if (err < 0)
 		return err;
 	return 0;
 }
 
 /* returns 0 if successful, !0 otherwise */
-static int sensors_read_sysfs_chips_compat(void)
+static int sensors_read_sysfs_chips_compat(sensors_config *config)
 {
 	int ret;
 
-	ret = sysfs_foreach_busdev("i2c", sensors_add_hwmon_device_compat);
+	ret = sysfs_foreach_busdev(config, "i2c", sensors_add_hwmon_device_compat);
 	if (ret && ret != ENOENT)
 		return -SENSORS_ERR_KERNEL;
 
 	return 0;
 }
 
-static int sensors_add_hwmon_device(const char *path, const char *classdev)
+static int sensors_add_hwmon_device(sensors_config *config, const char *path, const char *classdev)
 {
 	char linkpath[NAME_MAX];
 	char *dev_path, *dev_name;
@@ -838,22 +1018,22 @@ static int sensors_add_hwmon_device(const char *path, const char *classdev)
 	(void)classdev; /* hide warning */
 
 	snprintf(linkpath, NAME_MAX, "%s/device", path);
-	dev_path = realpath(linkpath, NULL);
+	dev_path = realpath_no_symlink(linkpath, NULL);
 	if (dev_path == NULL) {
 		if (errno == ENOMEM) {
 			sensors_fatal_error(__func__, "Out of memory");
 		} else {
 			/* No device link? Treat as virtual */
-			err = sensors_read_one_sysfs_chip(NULL, NULL, path);
+			err = sensors_read_one_sysfs_chip(config, NULL, NULL, path);
 		}
 	} else {
 		dev_name = strrchr(dev_path, '/') + 1;
 
 		/* The attributes we want might be those of the hwmon class
 		   device, or those of the device itself. */
-		err = sensors_read_one_sysfs_chip(dev_path, dev_name, path);
+		err = sensors_read_one_sysfs_chip(config, dev_path, dev_name, path);
 		if (err == 0)
-			err = sensors_read_one_sysfs_chip(dev_path, dev_name,
+			err = sensors_read_one_sysfs_chip(config, dev_path, dev_name,
 							  dev_path);
 		free(dev_path);
 	}
@@ -863,14 +1043,14 @@ static int sensors_add_hwmon_device(const char *path, const char *classdev)
 }
 
 /* returns 0 if successful, !0 otherwise */
-int sensors_read_sysfs_chips(void)
+int sensors_read_sysfs_chips(sensors_config *config)
 {
 	int ret;
 
-	ret = sysfs_foreach_classdev("hwmon", sensors_add_hwmon_device);
+	ret = sysfs_foreach_classdev(config, "hwmon", sensors_add_hwmon_device);
 	if (ret == ENOENT) {
 		/* compatibility function for kernel 2.6.n where n <= 13 */
-		return sensors_read_sysfs_chips_compat();
+		return sensors_read_sysfs_chips_compat(config);
 	}
 
 	if (ret > 0)
@@ -879,7 +1059,7 @@ int sensors_read_sysfs_chips(void)
 }
 
 /* returns 0 if successful, !0 otherwise */
-static int sensors_add_i2c_bus(const char *path, const char *classdev)
+static int sensors_add_i2c_bus(sensors_config *config, const char *path, const char *classdev)
 {
 	sensors_bus entry;
 
@@ -901,13 +1081,13 @@ static int sensors_add_i2c_bus(const char *path, const char *classdev)
 }
 
 /* returns 0 if successful, !0 otherwise */
-int sensors_read_sysfs_bus(void)
+int sensors_read_sysfs_bus(sensors_config *config)
 {
 	int ret;
 
-	ret = sysfs_foreach_classdev("i2c-adapter", sensors_add_i2c_bus);
+	ret = sysfs_foreach_classdev(config, "i2c-adapter", sensors_add_i2c_bus);
 	if (ret == ENOENT)
-		ret = sysfs_foreach_busdev("i2c", sensors_add_i2c_bus);
+		ret = sysfs_foreach_busdev(config, "i2c", sensors_add_i2c_bus);
 	if (ret && ret != ENOENT)
 		return -SENSORS_ERR_KERNEL;
 

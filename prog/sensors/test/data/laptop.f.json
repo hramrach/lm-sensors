@@ -1,0 +1,411 @@
+{
+  "BAT1-isa-00ba": {
+    "Adapter": "ISA adapter",
+    "curr1": {
+      "input": {
+        "quantity": "current",
+        "unit": "A",
+        "value": 0
+      }
+    },
+    "in0": {
+      "input": {
+        "quantity": "voltage",
+        "unit": "V",
+        "value": 16.575
+      }
+    }
+  },
+  "acpitz-isa-0000": {
+    "Adapter": "ISA adapter",
+    "temp1": {
+      "crit": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 410
+      },
+      "input": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 110.84
+      }
+    },
+    "temp2": {
+      "crit": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 410
+      },
+      "input": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 109.04
+      }
+    },
+    "temp3": {
+      "crit": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 410
+      },
+      "input": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 110.84
+      }
+    },
+    "temp4": {
+      "crit": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 410
+      },
+      "input": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 103.64
+      }
+    },
+    "temp5": {
+      "crit": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 410
+      },
+      "input": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 85.64
+      }
+    }
+  },
+  "coretemp-isa-0000": {
+    "Adapter": "ISA adapter",
+    "temp1": {
+      "crit": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      },
+      "crit_alarm": {
+        "quantity": "boolean",
+        "value": 0
+      },
+      "input": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 107.6
+      },
+      "label": "Package id 0",
+      "max": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      }
+    },
+    "temp10": {
+      "crit": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      },
+      "crit_alarm": {
+        "quantity": "boolean",
+        "value": 0
+      },
+      "input": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 102.2
+      },
+      "label": "Core 20",
+      "max": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      }
+    },
+    "temp11": {
+      "crit": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      },
+      "crit_alarm": {
+        "quantity": "boolean",
+        "value": 0
+      },
+      "input": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 105.8
+      },
+      "label": "Core 21",
+      "max": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      }
+    },
+    "temp12": {
+      "crit": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      },
+      "crit_alarm": {
+        "quantity": "boolean",
+        "value": 0
+      },
+      "input": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 104
+      },
+      "label": "Core 22",
+      "max": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      }
+    },
+    "temp13": {
+      "crit": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      },
+      "crit_alarm": {
+        "quantity": "boolean",
+        "value": 0
+      },
+      "input": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 102.2
+      },
+      "label": "Core 23",
+      "max": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      }
+    },
+    "temp2": {
+      "crit": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      },
+      "crit_alarm": {
+        "quantity": "boolean",
+        "value": 0
+      },
+      "input": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 105.8
+      },
+      "label": "Core 0",
+      "max": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      }
+    },
+    "temp3": {
+      "crit": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      },
+      "crit_alarm": {
+        "quantity": "boolean",
+        "value": 0
+      },
+      "input": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 98.60000000000001
+      },
+      "label": "Core 4",
+      "max": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      }
+    },
+    "temp4": {
+      "crit": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      },
+      "crit_alarm": {
+        "quantity": "boolean",
+        "value": 0
+      },
+      "input": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 102.2
+      },
+      "label": "Core 8",
+      "max": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      }
+    },
+    "temp5": {
+      "crit": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      },
+      "crit_alarm": {
+        "quantity": "boolean",
+        "value": 0
+      },
+      "input": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 104
+      },
+      "label": "Core 12",
+      "max": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      }
+    },
+    "temp6": {
+      "crit": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      },
+      "crit_alarm": {
+        "quantity": "boolean",
+        "value": 0
+      },
+      "input": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 104
+      },
+      "label": "Core 16",
+      "max": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      }
+    },
+    "temp7": {
+      "crit": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      },
+      "crit_alarm": {
+        "quantity": "boolean",
+        "value": 0
+      },
+      "input": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 102.2
+      },
+      "label": "Core 17",
+      "max": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      }
+    },
+    "temp8": {
+      "crit": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      },
+      "crit_alarm": {
+        "quantity": "boolean",
+        "value": 0
+      },
+      "input": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 102.2
+      },
+      "label": "Core 18",
+      "max": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      }
+    },
+    "temp9": {
+      "crit": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      },
+      "crit_alarm": {
+        "quantity": "boolean",
+        "value": 0
+      },
+      "input": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 104
+      },
+      "label": "Core 19",
+      "max": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 212
+      }
+    }
+  },
+  "iwlwifi_1-isa-0000": {
+    "Adapter": "ISA adapter",
+    "temp1": {
+      "input": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 111.2
+      }
+    }
+  },
+  "nvme-isa-0000": {
+    "Adapter": "ISA adapter",
+    "temp1": {
+      "alarm": {
+        "quantity": "boolean",
+        "value": 0
+      },
+      "crit": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 200.93
+      },
+      "input": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 98.33
+      },
+      "label": "Composite",
+      "max": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 193.73
+      },
+      "min": {
+        "quantity": "temperature",
+        "unit": "°F",
+        "value": 22.73
+      }
+    }
+  }
+}
