@@ -22,7 +22,7 @@
 #ifndef LIB_SENSORS_SYSFS_H
 #define LIB_SENSORS_SYSFS_H
 
-extern char sensors_sysfs_mount[];
+extern const char *sensors_sysfs_mount;
 
 int sensors_init_sysfs(void);
 

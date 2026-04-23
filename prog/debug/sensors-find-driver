@@ -74,7 +74,7 @@ while true; do
 		DRIVER_DIR=$(readlink -f "$DEVICE/driver")
 		DRIVER=$(basename "$DRIVER_DIR")
 		if [ -L "$DRIVER_DIR/module" ]; then
-			MODULE=$(basename $(readlink "$DRIVER_DIR/module"))
+			MODULE="$(basename "$(readlink "$DRIVER_DIR/module")")"
 		fi
 		break
 	elif [ -L "$DEVICE/device" ]; then

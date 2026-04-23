@@ -6,6 +6,38 @@ over time. This document summarizes these evolutions so that application
 authors can quickly figure out how to test for the availability of a
 given new feature.
 
+0x510	lm-sensors 3.6.2
+* Added pwm scaling factor
+* Added support for SDIO bus
+  #define SENSORS_BUS_TYPE_SDIO
+* Added support for ignoring subfeatures
+* Added support for frequency sensors
+  enum sensors_feature_type SENSORS_FEATURE_FREQ
+  enum sensors_subfeature_type SENSORS_SUBFEATURE_FREQ_INPUT
+* Added support for min/max rating if voltage/cuttent/power
+  enum sensors_subfeature_type SENSORS_SUBFEATURE_IN_RATED_MIN
+  enum sensors_subfeature_type SENSORS_SUBFEATURE_IN_RATED_MAX
+  enum sensors_subfeature_type SENSORS_SUBFEATURE_POWER_RATED_MIN
+  enum sensors_subfeature_type SENSORS_SUBFEATURE_POWER_RATED_MAX
+  enum sensors_subfeature_type SENSORS_SUBFEATURE_CURR_RATED_MIN
+  enum sensors_subfeature_type SENSORS_SUBFEATURE_CURR_RATED_MAX
+* Added support for getting subfeature quantity and units
+  enum sensors_quantity
+  function sensors_get_subfeature_quantity
+  functions sensors_get_quantity_name sensors_get_quantity_unit
+* Added support for translating temperature sensor type
+  enum sensors_temp_type
+  function sensors_temp_type_name
+* Added SENSORS_SYSFS_ROOT environment variable
+
+0x501
+* Added support for pwm sensors
+  enum sensors_feature_type SENSORS_FEATURE_PWM
+  enum sensors_subfeature_type SENSORS_SUBFEATURE_PWM_IO
+  enum sensors_subfeature_type SENSORS_SUBFEATURE_PWM_FREQ
+  enum sensors_subfeature_type SENSORS_SUBFEATURE_PWM_ENABLE
+  enum sensors_subfeature_type SENSORS_SUBFEATURE_PWM_MODE
+
 0x500   lm-sensors 3.5.0
 * Added support for power min, lcrit, min_alarm and lcrit_alarm
   enum sensors_subfeature_type SENSORS_SUBFEATURE_POWER_MIN

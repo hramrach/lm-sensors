@@ -29,13 +29,14 @@
 #
 #
 
-LM_VERSION='3.6.0+git'
-PIDFILE="/var/run/fancontrol.pid"
+LM_VERSION='3.6.2+git'
+PIDFILE="/run/fancontrol.pid"
+USERDIR=$(pwd)
 
 if [ -f "$PIDFILE" ]
 then
 	echo "File $PIDFILE exists. This typically means that the"
-	echo "fancontrol deamon is running. You should stop it before running pwmconfig."
+	echo "fancontrol daemon is running. You should stop it before running pwmconfig."
 	echo "If you are certain that fancontrol is not running, then you can delete"
 	echo "$PIDFILE manually."
 	exit 1
@@ -214,14 +215,12 @@ function pwmenable()
 {
 	local ENABLE=${1}_enable
 
-	if [ -w $ENABLE ]
+	echo 1 > $ENABLE 2>/dev/null
+	if [ "$(cat $ENABLE)" -ne 1 ]
 	then
-		echo 1 2>/dev/null > $ENABLE
-		if [ $? -ne 0 ]
-		then
-			return 1
-		fi
+		return 1
 	fi
+
 	echo $MAX > $1
 }
 
@@ -284,7 +283,7 @@ echo 'Found the following fan sensors:'
 for i in $FAN
 do
 	S=$(cat $i)
-	if [ "$S" = "0" -o "$S" = "-1" ]
+	if [ "$S" = "0" -o "$S" = "-1" -o "$S" = ""  ]
 	then
 		echo "   $i     current speed: 0 ... skipping!"
 	else
@@ -452,7 +451,7 @@ do
 		OS=$(echo $SPEEDS | cut -d' ' -f$count)
 		S=$(echo $CURRENT_SPEEDS | cut -d' ' -f$count)
 		echo "  $j ... speed was $OS now $S"
-		let threshold=3*$OS/4
+		let threshold=5*$OS/6
 		if [ $S -lt $threshold ]
 		then
 			echo "    It appears that fan $j"
@@ -614,6 +613,10 @@ function AskPath()
 	then
 		FCCONFIG="/etc/fancontrol"
 	fi
+	if [ ${FCCONFIG::1} != "/" ]
+	then
+		FCCONFIG=$(readlink -f "$USERDIR"/"$FCCONFIG")
+	fi
 }
 
 AskPath
@@ -642,17 +645,17 @@ function LoadConfig()
 	fi
 
 	echo "Loading configuration from $1 ..."
-	INTERVAL=$(egrep '^INTERVAL=.*$' $1 | sed -e 's/INTERVAL= *//g')
-	OLD_DEVPATH=$(egrep '^DEVPATH=.*$' $1 | sed -e 's/DEVPATH= *//g')
-	OLD_DEVNAME=$(egrep '^DEVNAME=.*$' $1 | sed -e 's/DEVNAME= *//g')
-	FCTEMPS=$(egrep '^FCTEMPS=.*$' $1 | sed -e 's/FCTEMPS= *//g')
-	FCFANS=$(egrep '^FCFANS=.*$' $1 | sed -e 's/FCFANS= *//g')
-	MINTEMP=$(egrep '^MINTEMP=.*$' $1 | sed -e 's/MINTEMP= *//g')
-	MAXTEMP=$(egrep '^MAXTEMP=.*$' $1 | sed -e 's/MAXTEMP= *//g')
-	MINSTART=$(egrep '^MINSTART=.*$' $1 | sed -e 's/MINSTART= *//g')
-	MINSTOP=$(egrep '^MINSTOP=.*$' $1 | sed -e 's/MINSTOP= *//g')
-	MINPWM=$(egrep '^MINPWM=.*$' $1 | sed -e 's/MINPWM= *//g')
-	MAXPWM=$(egrep '^MAXPWM=.*$' $1 | sed -e 's/MAXPWM= *//g')
+	INTERVAL=$(grep -E '^INTERVAL=.*$' $1 | sed -e 's/INTERVAL= *//g')
+	OLD_DEVPATH=$(grep -E '^DEVPATH=.*$' $1 | sed -e 's/DEVPATH= *//g')
+	OLD_DEVNAME=$(grep -E '^DEVNAME=.*$' $1 | sed -e 's/DEVNAME= *//g')
+	FCTEMPS=$(grep -E '^FCTEMPS=.*$' $1 | sed -e 's/FCTEMPS= *//g')
+	FCFANS=$(grep -E '^FCFANS=.*$' $1 | sed -e 's/FCFANS= *//g')
+	MINTEMP=$(grep -E '^MINTEMP=.*$' $1 | sed -e 's/MINTEMP= *//g')
+	MAXTEMP=$(grep -E '^MAXTEMP=.*$' $1 | sed -e 's/MAXTEMP= *//g')
+	MINSTART=$(grep -E '^MINSTART=.*$' $1 | sed -e 's/MINSTART= *//g')
+	MINSTOP=$(grep -E '^MINSTOP=.*$' $1 | sed -e 's/MINSTOP= *//g')
+	MINPWM=$(grep -E '^MINPWM=.*$' $1 | sed -e 's/MINPWM= *//g')
+	MAXPWM=$(grep -E '^MAXPWM=.*$' $1 | sed -e 's/MAXPWM= *//g')
 
 	# Check for configuration change
 	if ! ValidateDevices "$OLD_DEVPATH" "$OLD_DEVNAME"
@@ -663,7 +666,7 @@ function LoadConfig()
 	fi
 }
 
-LoadConfig $FCCONFIG
+LoadConfig "$FCCONFIG"
 
 # $1 = pwm value below which the fan is stopped
 function TestMinStart()
@@ -815,8 +818,8 @@ function SaveConfig()
 	echo "MINSTOP=$MINSTOP" >>$tmpfile
 	[ -n "$MINPWM" ] && echo "MINPWM=$MINPWM" >>$tmpfile
 	[ -n "$MAXPWM" ] && echo "MAXPWM=$MAXPWM" >>$tmpfile
-	mv $tmpfile $FCCONFIG
-	chmod +r $FCCONFIG
+	mv $tmpfile "$FCCONFIG"
+	chmod +r "$FCCONFIG"
 	#check if file was written correctly
 	echo 'Configuration saved'
 }
@@ -831,7 +834,7 @@ DEFMINSTOP=100
 function filter_cfgvar()
 {
 	echo "$1" | sed -e 's/ /\n/g' \
-		  | egrep "$2" \
+		  | grep -E "$2" \
 		  | sed -e 's/.*=//g'
 }
 
@@ -877,7 +880,7 @@ select pwms in $pwmactive "Change INTERVAL" "Just quit" "Save and quit" "Show co
 		echo
 		break ;;
 
-	"$(echo ${pwmactive} |sed -e 's/ /\n/g' | egrep "${pwms}")" )
+	"$(echo ${pwmactive} |sed -e 's/ /\n/g' | grep -E "${pwms}")" )
 		pwmsed=$(echo ${pwms} | sed -e 's/\//\\\//g') #escape / for sed
 		echo
 

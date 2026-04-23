@@ -43,8 +43,14 @@ LIBSHLIBNAME := libsensors.so.$(LIBVER)
 LIBSTLIBNAME := libsensors.a
 LIBSHSONAME := libsensors.so.$(LIBMAINVER)
 
+ifeq ($(BUILD_SHARED_LIB),1)
 LIBTARGETS := $(MODULE_DIR)/$(LIBSHLIBNAME) \
               $(MODULE_DIR)/$(LIBSHSONAME) $(MODULE_DIR)/$(LIBSHBASENAME)
+LIBDEP_FOR_PROGS := $(LIBSHBASENAME)
+else
+LIBDEP_FOR_PROGS := $(LIBSTLIBNAME)
+endif
+
 ifeq ($(BUILD_STATIC_LIB),1)
 LIBTARGETS += $(MODULE_DIR)/$(LIBSTLIBNAME)
 endif
@@ -63,7 +69,7 @@ LIBHEADERFILES := $(MODULE_DIR)/error.h $(MODULE_DIR)/sensors.h
 
 # How to create the shared library
 $(MODULE_DIR)/$(LIBSHLIBNAME): $(LIBSHOBJECTS) $(LIB_DIR)/libsensors.map
-	$(CC) -shared $(LDFLAGS) -Wl,--version-script=$(LIB_DIR)/libsensors.map -Wl,-soname,$(LIBSHSONAME) -o $@ $(LIBSHOBJECTS) -lc -lm
+	$(CC) -shared -Wl,--version-script=$(LIB_DIR)/libsensors.map -Wl,-soname,$(LIBSHSONAME) -o $@ $(LIBSHOBJECTS) $(ALL_LDFLAGS) -lc -lm
 
 $(MODULE_DIR)/$(LIBSHSONAME): $(MODULE_DIR)/$(LIBSHLIBNAME)
 	$(RM) $@
@@ -79,28 +85,13 @@ $(MODULE_DIR)/$(LIBSTLIBNAME): $(LIBSTOBJECTS)
 	$(AR) rcvs $@ $^
 
 # Depencies for non-C sources
-$(MODULE_DIR)/conf-lex.c: $(MODULE_DIR)/conf-lex.l $(MODULE_DIR)/general.h \
-                          $(MODULE_DIR)/data.h $(MODULE_DIR)/conf-parse.h
-$(MODULE_DIR)/conf-parse.c: $(MODULE_DIR)/conf-parse.y $(MODULE_DIR)/general.h \
-                            $(MODULE_DIR)/data.h
-$(MODULE_DIR)/conf-parse.h: $(MODULE_DIR)/conf-parse.c
+$(MODULE_DIR)/conf-lex.c: Makefile $(MODULE_DIR)/Module.mk
+$(MODULE_DIR)/conf-parse.c: Makefile $(MODULE_DIR)/Module.mk
+$(MODULE_DIR)/conf-lex.ad: $(MODULE_DIR)/conf-parse.c
+$(MODULE_DIR)/conf-lex.ld: $(MODULE_DIR)/conf-parse.c
 
 # Include all dependency files
 INCLUDEFILES += $(LIBSHOBJECTS:.lo=.ld) $(LIBSTOBJECTS:.ao=.ad)
-
-# Special warning prevention for flex-generated files
-FLEXNOWARN:=-Wno-shadow -Wno-undef -Wno-unused -Wno-missing-prototypes -Wno-sign-compare
-$(MODULE_DIR)/conf-lex.ao: $(MODULE_DIR)/conf-lex.c
-	$(CC) $(ARCPPFLAGS) $(ARCFLAGS) $(FLEXNOWARN) -c $< -o $@
-$(MODULE_DIR)/conf-lex.lo: $(MODULE_DIR)/conf-lex.c
-	$(CC) $(LIBCPPFLAGS) $(LIBCFLAGS) $(FLEXNOWARN) -c $< -o $@
-
-# Special warning prevention for bison-generated files
-YACCNOWARN:=-Wno-undef
-$(MODULE_DIR)/conf-parse.ao: $(MODULE_DIR)/conf-parse.c
-	$(CC) $(ARCPPFLAGS) $(ARCFLAGS) $(YACCNOWARN) -c $< -o $@
-$(MODULE_DIR)/conf-parse.lo: $(MODULE_DIR)/conf-parse.c
-	$(CC) $(LIBCPPFLAGS) $(LIBCFLAGS) $(YACCNOWARN) -c $< -o $@
 
 REMOVELIBST := $(patsubst $(MODULE_DIR)/%,$(DESTDIR)$(LIBDIR)/%,$(LIB_DIR)/$(LIBSTLIBNAME))
 REMOVELIBSH := $(patsubst $(MODULE_DIR)/%,$(DESTDIR)$(LIBDIR)/%,$(LIB_DIR)/$(LIBSHLIBNAME))
@@ -131,9 +122,11 @@ install-lib: all-lib
 ifeq ($(BUILD_STATIC_LIB),1)
 	$(INSTALL) -m 644 $(LIB_DIR)/$(LIBSTLIBNAME) $(DESTDIR)$(LIBDIR)
 endif
+ifeq ($(BUILD_SHARED_LIB),1)
 	$(INSTALL) -m 755 $(LIB_DIR)/$(LIBSHLIBNAME) $(DESTDIR)$(LIBDIR)
 	$(LN) $(LIBSHLIBNAME) $(DESTDIR)$(LIBDIR)/$(LIBSHSONAME)
 	$(LN) $(LIBSHSONAME) $(DESTDIR)$(LIBDIR)/$(LIBSHBASENAME)
+endif
 	@if [ -z "$(DESTDIR)" -a "$(LIBDIR)" != "/usr/lib" -a "$(LIBDIR)" != "/lib" ] ; then \
 	   if [ -e "/usr/lib/$(LIBSHSONAME)" -o -e "/usr/lib/$(LIBSHBASENAME)" ] ; then \
 	     echo '******************************************************************************' ; \

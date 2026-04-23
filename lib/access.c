@@ -168,7 +168,7 @@ char *sensors_get_label(const sensors_chip_name *name,
 {
 	char *label;
 	const sensors_chip *chip;
-	char buf[PATH_MAX];
+	char buf[PATH_MAX + 1] = {0};
 	FILE *f;
 	int i;
 
@@ -183,12 +183,14 @@ char *sensors_get_label(const sensors_chip_name *name,
 			}
 
 	/* No user specified label, check for a _label sysfs file */
-	snprintf(buf, PATH_MAX, "%s/%s_label", name->path, feature->name);
-	
+	snprintf(buf, sizeof(buf) - 1, "%s/%s_label", name->path, feature->name);
+
 	if ((f = fopen(buf, "r"))) {
-		i = fread(buf, 1, sizeof(buf), f);
+		i = fread(buf, 1, sizeof(buf) - 1, f);
 		fclose(f);
 		if (i > 0) {
+			buf[i] = 0; /* terminate string */
+			i = strlen(buf); /* strip trailing zeroes */
 			/* i - 1 to strip the '\n' at the end */
 			buf[i - 1] = 0;
 			label = buf;
@@ -217,6 +219,21 @@ static int sensors_get_ignored(const sensors_chip_name *name,
 	for (chip = NULL; (chip = sensors_for_all_config_chips(name, chip));)
 		for (i = 0; i < chip->ignores_count; i++)
 			if (!strcmp(feature->name, chip->ignores[i].name))
+				return 1;
+	return 0;
+}
+
+/* Looks up whether a sub-feature should be ignored. Returns
+   1 if it should be ignored, 0 if not. */
+static int subfeatures_get_ignored(const sensors_chip_name *name,
+                                   const sensors_subfeature *subfeature)
+{
+	const sensors_chip *chip;
+	int i;
+
+	for (chip = NULL; (chip = sensors_for_all_config_chips(name, chip));)
+		for (i = 0; i < chip->ignores_count; i++)
+			if (!strcmp(subfeature->name, chip->ignores[i].name))
 				return 1;
 	return 0;
 }
@@ -371,6 +388,8 @@ const char *sensors_get_adapter_name(const sensors_bus_id *bus)
 		return "MDIO adapter";
 	case SENSORS_BUS_TYPE_SCSI:
 		return "SCSI adapter";
+	case SENSORS_BUS_TYPE_SDIO:
+		return "SDIO adapter";
 	}
 
 	/* bus types with several instances */
@@ -414,7 +433,8 @@ sensors_get_all_subfeatures(const sensors_chip_name *name,
 	if (*nr >= chip->subfeature_count)
 		return NULL;	/* end of list */
 	subfeature = &chip->subfeature[(*nr)++];
-	if (subfeature->mapping == feature->number)
+	if (subfeature->mapping == feature->number &&
+	    !subfeatures_get_ignored(name, subfeature))
 		return subfeature;
 	return NULL;	/* end of subfeature list */
 }
@@ -432,7 +452,8 @@ sensors_get_subfeature(const sensors_chip_name *name,
 
 	for (i = feature->first_subfeature; i < chip->subfeature_count &&
 	     chip->subfeature[i].mapping == feature->number; i++) {
-		if (chip->subfeature[i].type == type)
+		if (chip->subfeature[i].type == type &&
+		    !subfeatures_get_ignored(name, &(chip->subfeature[i])))
 			return &chip->subfeature[i];
 	}
 	return NULL;	/* No such subfeature */

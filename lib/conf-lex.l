@@ -1,7 +1,7 @@
 %{
 /*
     conf-lex.l - Part of libsensors, a Linux library for reading sensor data.
-    Copyright (c) 1998, 1999  Frodo Looijaard <frodol@dds.nl> 
+    Copyright (c) 1998, 1999  Frodo Looijaard <frodol@dds.nl>
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -55,6 +55,7 @@ int sensors_yylineno;
 %option nodefault
 %option noyywrap
 %option nounput
+%option noinput
 
  /* All states are exclusive */
 
@@ -244,7 +245,7 @@ ignore{BLANK}*	{
 		  if (! sensors_yylval.name)
 		    sensors_fatal_error("conf-lex.l",
                                         "Allocating a new string");
-		  
+
 		  return NAME;
 		}
 
@@ -295,7 +296,7 @@ ignore{BLANK}*	{
 		  BEGIN(ERR);
 		  return ERROR;
 		}
-		
+
 \"		{
 		  buffer_add_char("\0");
 		  sensors_yylval.name = strdup(buffer);

@@ -136,25 +136,11 @@ static int sysfs_foreach_busdev(const char *bus_type,
 
 /****************************************************************************/
 
-char sensors_sysfs_mount[NAME_MAX];
+const char *sensors_sysfs_mount = "/sys";
 
 static
-int get_type_scaling(sensors_subfeature_type type)
+double get_type_scaling(sensors_subfeature_type type)
 {
-	/* Multipliers for subfeatures */
-	switch (type & 0xFF80) {
-	case SENSORS_SUBFEATURE_IN_INPUT:
-	case SENSORS_SUBFEATURE_TEMP_INPUT:
-	case SENSORS_SUBFEATURE_CURR_INPUT:
-	case SENSORS_SUBFEATURE_HUMIDITY_INPUT:
-		return 1000;
-	case SENSORS_SUBFEATURE_FAN_INPUT:
-		return 1;
-	case SENSORS_SUBFEATURE_POWER_AVERAGE:
-	case SENSORS_SUBFEATURE_ENERGY_INPUT:
-		return 1000000;
-	}
-
 	/* Multipliers for second class subfeatures
 	   that need their own multiplier */
 	switch (type) {
@@ -162,9 +148,112 @@ int get_type_scaling(sensors_subfeature_type type)
 	case SENSORS_SUBFEATURE_VID:
 	case SENSORS_SUBFEATURE_TEMP_OFFSET:
 		return 1000;
+	case SENSORS_SUBFEATURE_PWM_IO:
+		return 2.55;
 	default:
-		return 1;
+		break;
 	}
+
+	/* Multipliers for subfeatures */
+	switch (type & 0xFF80) {
+	case SENSORS_SUBFEATURE_IN_INPUT:
+	case SENSORS_SUBFEATURE_TEMP_INPUT:
+	case SENSORS_SUBFEATURE_CURR_INPUT:
+	case SENSORS_SUBFEATURE_HUMIDITY_INPUT:
+		return 1000;
+	case SENSORS_SUBFEATURE_POWER_AVERAGE:
+	case SENSORS_SUBFEATURE_ENERGY_INPUT:
+		return 1000000;
+	}
+
+	return 1;
+}
+
+sensors_quantity sensors_get_subfeature_quantity(sensors_subfeature_type type)
+{
+	/* Second class subfeatures
+	   that need their own handling */
+	switch (type) {
+		case SENSORS_SUBFEATURE_FAN_DIV:
+		case SENSORS_SUBFEATURE_FAN_PULSES:
+		case SENSORS_SUBFEATURE_TEMP_TYPE:
+		case SENSORS_SUBFEATURE_TEMP_OFFSET:
+		case SENSORS_SUBFEATURE_PWM_MODE:
+			return SENSORS_QUANTITY_NONE;
+		case SENSORS_SUBFEATURE_POWER_AVERAGE_INTERVAL:
+			return SENSORS_QUANTITY_INTERVAL;
+		case SENSORS_SUBFEATURE_PWM_FREQ:
+			return SENSORS_QUANTITY_FREQ;
+		default:
+			break;
+	}
+
+	/* Generic subfeatures groups */
+	switch (type & 0xFF80) {
+		case SENSORS_SUBFEATURE_IN_ALARM:
+		case SENSORS_SUBFEATURE_FAN_ALARM:
+		case SENSORS_SUBFEATURE_TEMP_ALARM:
+		case SENSORS_SUBFEATURE_POWER_AVERAGE_INTERVAL:
+		case SENSORS_SUBFEATURE_CURR_ALARM:
+		case SENSORS_SUBFEATURE_PWM_ENABLE:
+		case SENSORS_SUBFEATURE_INTRUSION_ALARM:
+		case SENSORS_SUBFEATURE_BEEP_ENABLE:
+			return SENSORS_QUANTITY_BOOL;
+		case SENSORS_SUBFEATURE_VID: /* reported in mV and scaled */
+		case SENSORS_SUBFEATURE_IN_INPUT:
+			return SENSORS_QUANTITY_VOLTAGE;
+		case SENSORS_SUBFEATURE_FAN_INPUT:
+			return SENSORS_QUANTITY_RPM;
+		case SENSORS_SUBFEATURE_TEMP_INPUT:
+			return SENSORS_QUANTITY_TEMP;
+		case SENSORS_SUBFEATURE_POWER_AVERAGE:
+			return SENSORS_QUANTITY_POWER;
+		case SENSORS_SUBFEATURE_ENERGY_INPUT:
+			return SENSORS_QUANTITY_ENERGY;
+		case SENSORS_SUBFEATURE_CURR_INPUT:
+			return SENSORS_QUANTITY_CURRENT;
+		case SENSORS_SUBFEATURE_HUMIDITY_INPUT:
+			return SENSORS_QUANTITY_VOLTAGE;
+		case SENSORS_SUBFEATURE_PWM_IO:
+			return SENSORS_QUANTITY_PWM;
+		case SENSORS_SUBFEATURE_FREQ_INPUT:
+			return SENSORS_QUANTITY_FREQ;
+	}
+
+	return SENSORS_QUANTITY_UNKNOWN;
+}
+
+static struct {
+	const char * name;
+	const char * unit;
+} quantity_names[SENSORS_QUANTITY_MAX + 1] = {
+	{"", ""},
+	{"", ""},
+	{"boolean", ""},
+	{"voltage", "V"},
+	{"rotation speed", "RPM"},
+	{"temperature", "°C"},
+	{"power", "W"},
+	{"time interval", "s"},
+	{"energy", "J"},
+	{"electric current", "A"},
+	{"humidity", "%RH"},
+	{"pwm", "%"},
+	{"frequency", "Hz"},
+};
+
+const char *sensors_get_quantity_name(sensors_quantity quant)
+{
+	if (quant > SENSORS_QUANTITY_MAX)
+		return NULL;
+	return quantity_names[quant].name;
+}
+
+const char *sensors_get_quantity_unit(sensors_quantity quant)
+{
+	if (quant > SENSORS_QUANTITY_MAX)
+		return NULL;
+	return quantity_names[quant].unit;
 }
 
 static
@@ -181,8 +270,16 @@ char *get_feature_name(sensors_feature_type ftype, char *sfname)
 	case SENSORS_FEATURE_CURR:
 	case SENSORS_FEATURE_HUMIDITY:
 	case SENSORS_FEATURE_INTRUSION:
+	case SENSORS_FEATURE_FREQ:
 		underscore = strchr(sfname, '_');
 		name = strndup(sfname, underscore - sfname);
+		if (!name)
+			sensors_fatal_error(__func__, "Out of memory");
+
+		break;
+	case SENSORS_FEATURE_PWM:
+		/* Not all pwm subfeatures have a underscore in there name */
+		name = strndup(sfname, 4);
 		if (!name)
 			sensors_fatal_error(__func__, "Out of memory");
 
@@ -251,6 +348,8 @@ static const struct subfeature_type_match in_matches[] = {
 	{ "lcrit_alarm", SENSORS_SUBFEATURE_IN_LCRIT_ALARM },
 	{ "crit_alarm", SENSORS_SUBFEATURE_IN_CRIT_ALARM },
 	{ "beep", SENSORS_SUBFEATURE_IN_BEEP },
+	{ "rated_min", SENSORS_SUBFEATURE_IN_RATED_MIN },
+	{ "rated_max", SENSORS_SUBFEATURE_IN_RATED_MAX },
 	{ NULL, 0 }
 };
 
@@ -288,6 +387,8 @@ static const struct subfeature_type_match power_matches[] = {
 	{ "crit_alarm", SENSORS_SUBFEATURE_POWER_CRIT_ALARM },
 	{ "lcrit_alarm", SENSORS_SUBFEATURE_POWER_LCRIT_ALARM },
 	{ "average_interval", SENSORS_SUBFEATURE_POWER_AVERAGE_INTERVAL },
+	{ "rated_min", SENSORS_SUBFEATURE_POWER_RATED_MIN },
+	{ "rated_max", SENSORS_SUBFEATURE_POWER_RATED_MAX },
 	{ NULL, 0 }
 };
 
@@ -311,11 +412,20 @@ static const struct subfeature_type_match curr_matches[] = {
 	{ "lcrit_alarm", SENSORS_SUBFEATURE_CURR_LCRIT_ALARM },
 	{ "crit_alarm", SENSORS_SUBFEATURE_CURR_CRIT_ALARM },
 	{ "beep", SENSORS_SUBFEATURE_CURR_BEEP },
+	{ "rated_min", SENSORS_SUBFEATURE_CURR_RATED_MIN },
+	{ "rated_max", SENSORS_SUBFEATURE_CURR_RATED_MAX },
 	{ NULL, 0 }
 };
 
 static const struct subfeature_type_match humidity_matches[] = {
 	{ "input", SENSORS_SUBFEATURE_HUMIDITY_INPUT },
+	{ NULL, 0 }
+};
+
+static const struct subfeature_type_match pwm_matches[] = {
+	{ "enable", SENSORS_SUBFEATURE_PWM_ENABLE },
+	{ "mode", SENSORS_SUBFEATURE_PWM_MODE },
+	{ "freq", SENSORS_SUBFEATURE_PWM_FREQ },
 	{ NULL, 0 }
 };
 
@@ -329,6 +439,11 @@ static const struct subfeature_type_match intrusion_matches[] = {
 	{ "beep", SENSORS_SUBFEATURE_INTRUSION_BEEP },
 	{ NULL, 0 }
 };
+
+static const struct subfeature_type_match freq_matches[] = {
+	{ "input", SENSORS_SUBFEATURE_FREQ_INPUT },
+	{ NULL, 0 }
+};
 static struct feature_type_match matches[] = {
 	{ "temp%d%c", temp_matches },
 	{ "in%d%c", in_matches },
@@ -339,6 +454,8 @@ static struct feature_type_match matches[] = {
 	{ "energy%d%c", energy_matches },
 	{ "intrusion%d%c", intrusion_matches },
 	{ "humidity%d%c", humidity_matches },
+	{ "freq%d%c", freq_matches },
+	{ "pwm%d%c", pwm_matches },
 };
 
 /* Return the subfeature type and channel number based on the subfeature
@@ -356,9 +473,15 @@ sensors_subfeature_type sensors_subfeature_get_type(const char *name, int *nr)
 		return SENSORS_SUBFEATURE_BEEP_ENABLE;
 	}
 
-	for (i = 0; i < ARRAY_SIZE(matches); i++)
-		if ((count = sscanf(name, matches[i].name, nr, &c)))
+	for (i = 0; i < ARRAY_SIZE(matches); i++) {
+		if ((count = sscanf(name, matches[i].name, nr, &c))) {
+			/* Needed for matching pwm[1-*] */
+			if (count == 1 && matches[i].submatches == pwm_matches)
+				return SENSORS_SUBFEATURE_PWM_IO;
+
 			break;
+		}
+	}
 
 	if (i == ARRAY_SIZE(matches) || count != 2 || c != '_')
 		return SENSORS_SUBFEATURE_UNKNOWN;  /* no match */
@@ -401,11 +524,11 @@ static int sensors_compute_max_sf(void)
 
 static int sensors_get_attr_mode(const char *device, const char *attr)
 {
-	char path[NAME_MAX];
+	char path[NAME_MAX + 2];
 	struct stat st;
 	int mode = 0;
 
-	snprintf(path, NAME_MAX, "%s/%s", device, attr);
+	snprintf(path, NAME_MAX + 2, "%s/%s", device, attr);
 	if (!stat(path, &st)) {
 		if (st.st_mode & S_IRUSR)
 			mode |= SENSORS_MODE_R;
@@ -468,6 +591,7 @@ static int sensors_read_dynamic_chip(sensors_chip_features *chip,
 		case SENSORS_FEATURE_ENERGY:
 		case SENSORS_FEATURE_CURR:
 		case SENSORS_FEATURE_HUMIDITY:
+		case SENSORS_FEATURE_PWM:
 			nr--;
 			break;
 		default:
@@ -606,12 +730,35 @@ exit_free:
 int sensors_init_sysfs(void)
 {
 	struct statfs statfsbuf;
+	struct stat statbuf;
+	const char *sysfs_root_env = getenv("SENSORS_SYSFS_ROOT");
+	const char *hwmon_subdir = "/class/hwmon";
+	char *hwmon_path;
+	size_t length;
+	int result;
 
-	snprintf(sensors_sysfs_mount, NAME_MAX, "%s", "/sys");
+	if (sysfs_root_env)
+		sensors_sysfs_mount = sysfs_root_env;
+
 	if (statfs(sensors_sysfs_mount, &statfsbuf) < 0
-	 || statfsbuf.f_type != SYSFS_MAGIC)
+	 || statfsbuf.f_type != SYSFS_MAGIC) {
+		if (sysfs_root_env)
+			fprintf(stderr, "%s: Not a sysfs mount.\n", sensors_sysfs_mount);
+		else
+			return 0;
+	}
+
+	length = strlen(sensors_sysfs_mount) + strlen(hwmon_subdir) + 1;
+	hwmon_path = malloc(length);
+	if (!hwmon_path)
 		return 0;
 
+	snprintf(hwmon_path, length, "%s%s", sensors_sysfs_mount, hwmon_subdir);
+	result = !stat(hwmon_path, &statbuf) && ((statbuf.st_mode & S_IFMT) == S_IFDIR);
+	if (sysfs_root_env && !result)
+		fprintf(stderr, "%s: No sensors at %s.\n", sensors_sysfs_mount, hwmon_path);
+
+	free(hwmon_path);
 	return 1;
 }
 
@@ -663,8 +810,9 @@ static int classify_device(const char *dev_name,
 	if ((!subsys || !strcmp(subsys, "platform") ||
 			!strcmp(subsys, "of_platform"))) {
 		/* must be new ISA (platform driver) */
-		if (sscanf(dev_name, "%*[a-zA-Z0-9_]%*1[.:]%d", &entry->chip.addr) != 1)
-			entry->chip.addr = 0;
+		if (sscanf(dev_name, "%*[a-zA-Z0-9_-]%*1[.:]%d", &entry->chip.addr) == 1);
+		else if (sscanf(dev_name, "%x.%*s", &entry->chip.addr) == 1);
+		else entry->chip.addr = 0;
 		entry->chip.bus.type = SENSORS_BUS_TYPE_ISA;
 		entry->chip.bus.nr = 0;
 	} else if (subsys && !strcmp(subsys, "acpi")) {
@@ -692,12 +840,38 @@ static int classify_device(const char *dev_name,
 		entry->chip.addr = (bus << 8) + (slot << 4) + fn;
 		entry->chip.bus.type = SENSORS_BUS_TYPE_SCSI;
 		entry->chip.bus.nr = domain;
+	} else
+	if (subsys && !strcmp(subsys, "sdio") &&
+	    sscanf(dev_name, "mmc%hx:%x:%x", &entry->chip.bus.nr, &slot, &fn) == 3) {
+		/* mmc host(bus), address, function */
+		/* adapter(host), channel(bus), id(target), lun */
+		entry->chip.addr = (slot << 3) + fn;
+		entry->chip.bus.type = SENSORS_BUS_TYPE_SDIO;
 	} else {
 		/* Unknown device */
 		ret = 0;
 	}
 
 	return ret;
+}
+
+/* realpath(3) that returns NULL for a path that isn't a symlink.
+   This is needed to deal with devices that have a "device" sysfs
+   entry that has the device ID, such as SDIO devices. */
+static char* realpath_no_symlink(const char *restrict path,
+				 char *restrict resolved_path)
+{
+	struct stat st;
+
+	if (lstat(path, &st) < 0)
+		return NULL;
+
+	if (!S_ISLNK(st.st_mode)) {
+		errno = -EINVAL;
+		return NULL;
+	}
+
+	return realpath(path, resolved_path);
 }
 
 static int find_bus_type(const char *dev_path,
@@ -740,7 +914,7 @@ static int find_bus_type(const char *dev_path,
 		if (!ret) {
 			snprintf(linkpath, NAME_MAX, "%s/device", my_dev_path);
 			free(my_dev_path);
-			my_dev_path = realpath(linkpath, NULL);
+			my_dev_path = realpath_no_symlink(linkpath, NULL);
 			if (my_dev_path != NULL)
 				dev_name = strrchr(my_dev_path, '/') + 1;
 			else if (errno == ENOMEM)
@@ -838,7 +1012,7 @@ static int sensors_add_hwmon_device(const char *path, const char *classdev)
 	(void)classdev; /* hide warning */
 
 	snprintf(linkpath, NAME_MAX, "%s/device", path);
-	dev_path = realpath(linkpath, NULL);
+	dev_path = realpath_no_symlink(linkpath, NULL);
 	if (dev_path == NULL) {
 		if (errno == ENOMEM) {
 			sensors_fatal_error(__func__, "Out of memory");

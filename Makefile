@@ -55,7 +55,13 @@ ETCDIR := /etc
 # library files (both static and shared) will be installed.
 LIBDIR := $(PREFIX)/lib
 
-EXLDFLAGS := -Wl,-rpath,$(LIBDIR)
+# You should not need to change this. It is the directory into which the
+# data files will be installed.
+DATADIR := $(PREFIX)/share
+
+# You should not need to change this. It is the directory into which the
+# ZSH completion files will be installed.
+ZSHCOMPDIR := $(DATADIR)/zsh/site-functions
 
 # You should not need to change this. It is the directory into which the
 # executable program files will be installed. BINDIR for programs that are
@@ -68,7 +74,7 @@ BINDIR := $(PREFIX)/bin
 SBINDIR := $(PREFIX)/sbin
 
 # You should not need to change this. It is the basic directory into which
-# include files will be installed. The actual directory will be 
+# include files will be installed. The actual directory will be
 # $(INCLUDEDIR)/sensors for library include files.
 INCLUDEDIR := $(PREFIX)/include
 LIBINCLUDEDIR := $(INCLUDEDIR)/sensors
@@ -84,6 +90,9 @@ ARCH := $(firstword $(subst -, ,$(shell $(CC) -dumpmachine)))
 
 # Build and install static library
 BUILD_STATIC_LIB := 1
+
+# Build and install shared library
+BUILD_SHARED_LIB := 1
 
 # Set these to add preprocessor or compiler flags, or use
 # environment variables
@@ -103,10 +112,10 @@ BUILD_STATIC_LIB := 1
 
 # Within each Module.mk, rules and dependencies can be added to targets
 # all, install and clean. Use double colons instead of single ones
-# to do this. 
+# to do this.
 
-# The subdirectories we need to build things in 
-SRCDIRS := lib prog/detect prog/pwm \
+# The subdirectories we need to build things in
+SRCDIRS := lib prog/debug prog/detect prog/pwm \
            prog/sensors ${PROG_EXTRA:%=prog/%} etc
 # Only build isadump and isaset on x86 machines.
 ifneq (,$(findstring $(ARCH), i386 i486 i586 i686 x86_64))
@@ -160,13 +169,34 @@ ARCFLAGS := $(ALL_CFLAGS)
 LIBCPPFLAGS := -DETCDIR="\"$(ETCDIR)\"" $(ALL_CPPFLAGS)
 LIBCFLAGS := -fpic -D_REENTRANT $(ALL_CFLAGS)
 
+ALL_LDFLAGS := $(LDFLAGS)
+
+# Determine iconv linking requirements
+# glibc has built-in iconv, other libc implementations may need -liconv
+ifndef LIBICONV
+  ICONV_TEST := $(shell printf '%s\n' \
+    '#include <iconv.h>' \
+    'int main() { iconv_t cd = iconv_open("UTF-8", "ASCII"); return 0; }' \
+    | $(CC) $(ALL_CPPFLAGS) -x c - -o /tmp/lm_sensors_iconv_test 2>/dev/null && echo "builtin" || echo "external")
+
+  ifeq ($(ICONV_TEST),builtin)
+    LIBICONV :=
+  else
+    LIBICONV := -liconv
+  endif
+
+  $(shell rm -f /tmp/lm_sensors_iconv_test)
+endif
+
+EXLDFLAGS := -Wl,-rpath,$(LIBDIR) $(ALL_LDFLAGS)
+
 .PHONY: all user clean install user_install uninstall user_uninstall
 
 # Make all the default rule
 all::
 
 # Include all makefiles for sub-modules
-INCLUDEFILES := 
+INCLUDEFILES :=
 include $(patsubst %,%/Module.mk,$(SRCDIRS))
 ifneq ($(MAKECMDGOALS),clean)
 ifneq ($(MAKECMDGOALS),uninstall)
@@ -181,6 +211,23 @@ endif
 # Man pages
 MANPAGES := $(LIBMAN3FILES) $(LIBMAN5FILES) $(PROGDETECTMAN8FILES) $(PROGDUMPMAN8FILES) \
             $(PROGSENSORSMAN1FILES) $(PROGPWMMAN8FILES) prog/sensord/sensord.8
+
+check:: test
+
+test:: shellcheck perlcheck test-sensors test-lib
+
+shellcheck::
+	shellcheck $(SHELLCHECKFILES)
+
+perlcheck::
+	for i in $(PERL_SOURCES) ; do perl -c $$i ; done
+
+test-lib:: lib/test/test-scanner
+	cd lib/test ; ./test-scanner.pl
+
+test-sensors:: prog/sensors/sensors
+	LD_LIBRARY_PATH=lib SENSORS_SYSFS_ROOT=prog/sensors/test/data/laptop prog/sensors/sensors -c /dev/null -J | jq -S | diff -u prog/sensors/test/data/laptop.json -
+	LD_LIBRARY_PATH=lib SENSORS_SYSFS_ROOT=prog/sensors/test/data/laptop prog/sensors/sensors -c /dev/null -J -f | jq -S | diff -u prog/sensors/test/data/laptop.f.json -
 
 user ::
 user_install::
@@ -267,21 +314,21 @@ manhtml:
 
 # Flex and Bison
 %.c: %.y
-	@if ! which $(BISON) 2> /dev/null ; then \
+	@if ! command -v $(BISON) 2> /dev/null ; then \
 		echo "Please install $(BISON), then run \"make clean\" and try again" ; \
 		false ; \
 	fi
 	$(BISON) -p sensors_yy -d $< -o $@
 
 ifeq ($(DEBUG),1)
-FLEX_FLAGS := -Psensors_yy -t -b -Cfe -8
+FLEX_FLAGS := -Psensors_yy -b -Cfe -8
 else
-FLEX_FLAGS := -Psensors_yy -t -Cfe -8
+FLEX_FLAGS := -Psensors_yy -Cfe -8
 endif
 
 %.c: %.l
-	@if ! which $(FLEX) 2> /dev/null ; then \
+	@if ! command -v $(FLEX) 2> /dev/null ; then \
 		echo "Please install $(FLEX), then run \"make clean\" and try again" ; \
 		false ; \
 	fi
-	$(FLEX) $(FLEX_FLAGS) $< > $@
+	$(FLEX) $(FLEX_FLAGS) -o $@ $<

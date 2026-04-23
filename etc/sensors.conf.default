@@ -227,7 +227,7 @@ chip "smsc47m192-*"
 
 
 chip "lm85-*" "lm85b-*" "lm85c-*" "adm1027-*" "adt7463-*" "adt7468-*" \
-     "emc6d100-*" "emc6d102-*" "emc6d103-*" "emc6d103s-*" 
+     "emc6d100-*" "emc6d102-*" "emc6d103-*" "emc6d103s-*"
 
     label in1 "Vcore"
     label in2 "+3.3V"
@@ -309,6 +309,17 @@ chip "w83627thf-*"
 # The battery voltage may or may not be monitored.
 #    set in8_min  3.0 * 0.90
 #    set in8_max  3.0 * 1.10
+
+
+chip "nct6106-isa-*"
+
+    label in0 "Vcore"
+    label in2 "AVCC"
+    label in3 "+3.3V"
+    label in6 "3VSB"
+    label in7 "Vbat"
+
+    compute in6 @*2, @/2
 
 
 chip "w83627ehf-*" "w83627dhg-*" "w83667hg-*" "nct6775-*" "nct6776-*" \

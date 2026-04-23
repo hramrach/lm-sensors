@@ -84,6 +84,7 @@ int sensors_parse_chip_name(const char *name, sensors_chip_name *res)
 {
 	char *dash;
 
+	memset(res, 0, sizeof(*res));
 	/* First, the prefix. It's either "*" or a real chip name. */
 	if (!strncmp(name, "*-", 2)) {
 		res->prefix = SENSORS_CHIP_NAME_PREFIX_ANY;
@@ -127,6 +128,8 @@ int sensors_parse_chip_name(const char *name, sensors_chip_name *res)
 		res->bus.type = SENSORS_BUS_TYPE_MDIO;
 	else if (!strncmp(name, "scsi", dash - name))
 		res->bus.type = SENSORS_BUS_TYPE_SCSI;
+	else if (!strncmp(name, "sdio", dash - name))
+		res->bus.type = SENSORS_BUS_TYPE_SDIO;
 	else
 		goto ERROR;
 	name = dash + 1;
@@ -204,6 +207,10 @@ int sensors_snprintf_chip_name(char *str, size_t size,
 	case SENSORS_BUS_TYPE_SCSI:
 		return snprintf(str, size, "%s-scsi-%hd-%x", chip->prefix,
 				chip->bus.nr, chip->addr);
+	case SENSORS_BUS_TYPE_SDIO:
+		return snprintf(str, size, "%s-sdio-%x:%04x:%x", chip->prefix,
+				chip->bus.nr, (chip->addr >> 3),
+				(chip->addr & 0x7));
 	}
 
 	return -SENSORS_ERR_CHIP_NAME;
@@ -284,4 +291,23 @@ int sensors_substitute_busses(void)
 	}
 	sensors_config_chips_subst = sensors_config_chips_count;
 	return res;
+}
+
+const char *sensors_temp_type_name(sensors_temp_type sens)
+{
+	/* older kernels / drivers sometimes report a beta value for
+	   thermistors */
+	if (sens > 1000)
+		sens = SENSORS_TEMP_THERMISTOR;
+
+	switch (sens) {
+		case SENSORS_TEMP_DISABLED: return "disabled";
+		case SENSORS_TEMP_CPU_DIODE: return "CPU diode";
+		case SENSORS_TEMP_TRANSISTOR: return "transistor";
+		case SENSORS_TEMP_THERMAL_DIODE: return "thermal diode";
+		case SENSORS_TEMP_THERMISTOR: return "thermistor";
+		case SENSORS_TEMP_AMD_AMDSI: return "AMD AMDSI";
+		case SENSORS_TEMP_INTEL_PECI: return "Intel PECI";
+	}
+	return "unknown";
 }

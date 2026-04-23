@@ -22,6 +22,7 @@
 #define PROG_SENSORS_MAIN_H
 
 extern int fahrenheit;
+extern int new_json;
 extern char degstr[5];
 
 #endif /* PROG_SENSORS_MAIN_H */

@@ -1,0 +1,64 @@
+#!/bin/sh
+
+verbose=true
+
+while [ "$*" != "" ] ; do
+	case $1 in
+		-q) verbose=false ; shift;;
+		*) break ;;
+	esac
+done
+
+if [ $# -ne 1 ] ; then
+	echo Usage: "$0 [ -q ] target" >&2
+	exit 22
+fi
+
+target="$1"
+prefix=/sys
+set -e
+
+set -- /class/hwmon
+
+while [ -n "$1" ] ; do
+	source="$1" ; shift
+	src="$prefix$source"
+	tgt="$target$source"
+	if [ -e "$tgt" ] ; then
+		! $verbose || echo "$tgt already exists"
+		continue
+	fi
+	if [ -L "$src" ] ; then
+		link="$(readlink "$src")"
+		! $verbose || echo "$tgt -> $link"
+		ln -s "$link" "$tgt"
+		link="/$(realpath --relative-to="$prefix" -s "$(dirname "$src")"/"$link")"
+		set -- "${link}" "$@"
+		continue
+	fi
+	if [ -d "$src" ] ; then
+		! $verbose || echo "$tgt/"
+		mkdir -p "$tgt"
+		sub="$(ls -A "$src")" # cannot use a pipeline, it creates new parameter scope
+		while [ -n "$sub" ] ; do
+			x=$(echo "$sub" | head -n 1)
+			sub="$(echo "$sub" | tail -n +2)"
+			[ "$x" != autosuspend_delay_ms ] || continue # these files cause io error
+			set -- "$source/$x" "$@"
+		done
+		continue
+	fi
+	if [ -f "$src" ] ; then
+		! $verbose || echo "$tgt"
+		if [ -r "$src" ] ; then
+			cp -a "$src" "$tgt" ||: # some files gitve i/o error even when readable
+		else
+			! $verbose || echo "$tgt not readable"
+			touch --reference="$src" "$tgt"
+			chmod --reference="$src" "$tgt"
+		fi
+		continue
+	fi
+done
+
+exit 0

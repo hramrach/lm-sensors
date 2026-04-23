@@ -85,7 +85,7 @@ static sensors_chip *current_chip = NULL;
   sensors_bus_id bus;
   sensors_chip_name chip;
   sensors_config_line line;
-}  
+}
 
 %left <nothing> '-' '+'
 %left <nothing> '*' '/'
@@ -211,13 +211,13 @@ chip_statement:	  CHIP chip_name_list
 		    new_el.ignores_count = new_el.ignores_max = 0;
 		    new_el.chips = $2;
 		    chip_add_el(&new_el);
-		    current_chip = sensors_config_chips + 
+		    current_chip = sensors_config_chips +
 		                   sensors_config_chips_count - 1;
 		  }
 ;
 
 chip_name_list:	  chip_name
-		  { 
+		  {
 		    $$.fits = NULL;
 		    $$.fits_count = $$.fits_max = 0;
 		    fits_add_el(&$1,$$);
@@ -227,14 +227,14 @@ chip_name_list:	  chip_name
 		    fits_add_el(&$2,$$);
 		  }
 ;
-	
-expression:	  FLOAT	
-		  { $$ = malloc_expr(); 
-		    $$->data.val = $1; 
+
+expression:	  FLOAT
+		  { $$ = malloc_expr();
+		    $$->data.val = $1;
 		    $$->kind = sensors_kind_val;
 		  }
 		| NAME
-		  { $$ = malloc_expr(); 
+		  { $$ = malloc_expr();
 		    $$->data.var = $1;
 		    $$->kind = sensors_kind_var;
 		  }
@@ -243,35 +243,35 @@ expression:	  FLOAT
 		    $$->kind = sensors_kind_source;
 		  }
 		| expression '+' expression
-		  { $$ = malloc_expr(); 
+		  { $$ = malloc_expr();
 		    $$->kind = sensors_kind_sub;
 		    $$->data.subexpr.op = sensors_add;
 		    $$->data.subexpr.sub1 = $1;
 		    $$->data.subexpr.sub2 = $3;
 		  }
 		| expression '-' expression
-		  { $$ = malloc_expr(); 
+		  { $$ = malloc_expr();
 		    $$->kind = sensors_kind_sub;
 		    $$->data.subexpr.op = sensors_sub;
 		    $$->data.subexpr.sub1 = $1;
 		    $$->data.subexpr.sub2 = $3;
 		  }
 		| expression '*' expression
-		  { $$ = malloc_expr(); 
+		  { $$ = malloc_expr();
 		    $$->kind = sensors_kind_sub;
 		    $$->data.subexpr.op = sensors_multiply;
 		    $$->data.subexpr.sub1 = $1;
 		    $$->data.subexpr.sub2 = $3;
 		  }
 		| expression '/' expression
-		  { $$ = malloc_expr(); 
+		  { $$ = malloc_expr();
 		    $$->kind = sensors_kind_sub;
 		    $$->data.subexpr.op = sensors_divide;
 		    $$->data.subexpr.sub1 = $1;
 		    $$->data.subexpr.sub2 = $3;
 		  }
 		| '-' expression  %prec NEG
-		  { $$ = malloc_expr(); 
+		  { $$ = malloc_expr();
 		    $$->kind = sensors_kind_sub;
 		    $$->data.subexpr.op = sensors_negate;
 		    $$->data.subexpr.sub1 = $2;
@@ -280,14 +280,14 @@ expression:	  FLOAT
 		| '(' expression ')'
 		  { $$ = $2; }
 		| '^' expression
-		  { $$ = malloc_expr(); 
+		  { $$ = malloc_expr();
 		    $$->kind = sensors_kind_sub;
 		    $$->data.subexpr.op = sensors_exp;
 		    $$->data.subexpr.sub1 = $2;
 		    $$->data.subexpr.sub2 = NULL;
 		  }
 		| '`' expression
-		  { $$ = malloc_expr(); 
+		  { $$ = malloc_expr();
 		    $$->kind = sensors_kind_sub;
 		    $$->data.subexpr.op = sensors_log;
 		    $$->data.subexpr.sub1 = $2;
@@ -318,7 +318,7 @@ string:	  NAME
 ;
 
 chip_name:	  NAME
-		  { int res = sensors_parse_chip_name($1,&$$); 
+		  { int res = sensors_parse_chip_name($1,&$$);
 		    free($1);
 		    if (res) {
 		      sensors_yyerror("Parse error in chip name");

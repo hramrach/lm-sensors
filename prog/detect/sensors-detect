@@ -38,7 +38,7 @@ foreach ('/usr/sbin', '/usr/local/sbin', '/sbin') {
 #########################
 
 use constant NO_CACHE => 1;
-use constant LM_VERSION => '3.6.0+git';
+use constant LM_VERSION => '3.6.2+git';
 use vars qw(@pci_adapters @chip_ids @ipmi_ifs @non_hwmon_chip_ids
 	    $i2c_addresses_to_scan @i2c_byte_cache %opt);
 
@@ -725,7 +725,7 @@ use vars qw(@i2c_adapter_names);
 		i2c_detect => sub { adt7467_detect(@_, 2); },
 	}, {
 		name => "Analog Devices ADT7466",
-		driver => "to-be-written",
+		driver => "lm85",
 		i2c_addrs => [0x4c],
 		i2c_detect => sub { adt7467_detect(@_, 3); },
 	}, {
@@ -2102,6 +2102,11 @@ use constant FEAT_SMBUS	=> (1 << 7);
 		driver => "not-a-sensor",
 		devid => 0x83,
 	}, {
+		name => "SMSC SCH5524-NS Super IO",
+		# No datasheet
+		driver => "not-a-sensor",
+		devid => 0x8d,
+	}, {
 		name => "SMSC SCH5627 Super IO",
 		driver => "sch5627",
 		devid => 0xc6,
@@ -3095,8 +3100,8 @@ use vars qw($kernel_version @kernel_version $kernel_arch);
 sub initialize_kernel_version
 {
 	chomp($kernel_version = `uname -r`);
-	$kernel_version =~ /(\d+)\.(\d+)\.(\d+)(.*)/;
-	@kernel_version = ($1, $2, $3, $4);
+	$kernel_version =~ /(\d+)\.(\d+)(?:\.(\d+))?(.*)/;
+	@kernel_version = ($1, $2, $3 || 0, $4);
 	chomp($kernel_arch = `uname -m`);
 
 	# We only support kernels >= 2.6.5
@@ -3346,7 +3351,9 @@ sub load_module
 # udev may take some time to create device nodes when loading modules
 sub udev_settle
 {
-	if (!(-x "/sbin/udevadm" && system("/sbin/udevadm settle") == 0)
+	if (!(-x "/usr/bin/udevadm" && system("/usr/bin/udevadm settle") == 0)
+	 && !(-x "/bin/udevadm" && system("/bin/udevadm settle") == 0)
+	 && !(-x "/sbin/udevadm" && system("/sbin/udevadm settle") == 0)
 	 && !(-x "/sbin/udevsettle" && system("/sbin/udevsettle") == 0)) {
 		sleep(1);
 	}
