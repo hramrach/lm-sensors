@@ -52,7 +52,6 @@ jobs:
           done
           PR_NUMBER="${{ github.event.pull_request.number }}"
           cp ${{ github.event_path }} ${{ github.workspace }}/event
-          cat ${{ github.workspace }}/event
 
       - name: ⏫ Upload coverage data
         uses: actions/upload-artifact@v7
