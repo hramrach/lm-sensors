@@ -226,6 +226,9 @@ test-lib:: lib/test/test-scanner
 test-sensors:: prog/sensors/sensors
 	LD_LIBRARY_PATH=lib SENSORS_SYSFS_ROOT=prog/sensors/test/data/laptop prog/sensors/sensors -c /dev/null -J | jq -S | diff -u prog/sensors/test/data/laptop.json -
 	LD_LIBRARY_PATH=lib SENSORS_SYSFS_ROOT=prog/sensors/test/data/laptop prog/sensors/sensors -c /dev/null -J -f | jq -S | diff -u prog/sensors/test/data/laptop.f.json -
+	LD_LIBRARY_PATH=lib SENSORS_SYSFS_ROOT=prog/sensors/test/data/laptop prog/sensors/sensors -c /dev/null -j | jq -S | diff -u prog/sensors/test/data/laptop-j.json -
+	LD_LIBRARY_PATH=lib SENSORS_SYSFS_ROOT=prog/sensors/test/data/laptop-err prog/sensors/sensors -c /dev/null -J | jq -S | diff -u prog/sensors/test/data/laptop-err.json -
+	LD_LIBRARY_PATH=lib SENSORS_SYSFS_ROOT=prog/sensors/test/data/laptop-err prog/sensors/sensors -c /dev/null -j | jq -S | diff -u prog/sensors/test/data/laptop-err-j.json -
 
 user ::
 user_install::

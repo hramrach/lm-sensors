@@ -1,0 +1,124 @@
+{
+  "BAT1-isa-00ba": {
+    "Adapter": "ISA adapter",
+    "curr1": {
+      "curr1_input": 0.000000
+    },
+    "in0": {}
+  },
+  "acpitz-isa-0000": {
+    "Adapter": "ISA adapter",
+    "temp1": {
+      "temp1_input": 43.800000
+    },
+    "temp2": {
+      "temp2_crit": 210.000000,
+      "temp2_input": 42.800000
+    },
+    "temp3": {
+      "temp3_crit": 210.000000,
+      "temp3_input": 43.800000
+    },
+    "temp4": {
+      "temp4_crit": 210.000000,
+      "temp4_input": 39.800000
+    },
+    "temp5": {
+      "temp5_crit": 210.000000,
+      "temp5_input": 29.800000
+    }
+  },
+  "coretemp-isa-0000": {
+    "Adapter": "ISA adapter",
+    "Core 0": {
+      "temp2_crit": 100.000000,
+      "temp2_crit_alarm": 0.000000,
+      "temp2_input": 41.000000,
+      "temp2_max": 100.000000
+    },
+    "Core 12": {
+      "temp5_crit": 100.000000,
+      "temp5_crit_alarm": 0.000000,
+      "temp5_input": 40.000000,
+      "temp5_max": 100.000000
+    },
+    "Core 16": {
+      "temp6_crit": 100.000000,
+      "temp6_crit_alarm": 0.000000,
+      "temp6_input": 40.000000,
+      "temp6_max": 100.000000
+    },
+    "Core 17": {
+      "temp7_crit": 100.000000,
+      "temp7_crit_alarm": 0.000000,
+      "temp7_input": 39.000000,
+      "temp7_max": 100.000000
+    },
+    "Core 18": {
+      "temp8_crit": 100.000000,
+      "temp8_crit_alarm": 0.000000,
+      "temp8_input": 39.000000,
+      "temp8_max": 100.000000
+    },
+    "Core 19": {
+      "temp9_crit": 100.000000,
+      "temp9_crit_alarm": 0.000000,
+      "temp9_input": 40.000000,
+      "temp9_max": 100.000000
+    },
+    "Core 20": {
+      "temp10_crit": 100.000000,
+      "temp10_input": 39.000000,
+      "temp10_max": 100.000000
+    },
+    "Core 21": {
+      "temp11_crit": 100.000000,
+      "temp11_crit_alarm": 0.000000,
+      "temp11_input": 41.000000,
+      "temp11_max": 100.000000
+    },
+    "Core 22": {
+      "temp12_crit": 100.000000,
+      "temp12_crit_alarm": 0.000000,
+      "temp12_input": 40.000000,
+      "temp12_max": 100.000000
+    },
+    "Core 23": {
+      "temp13_crit": 100.000000,
+      "temp13_crit_alarm": 0.000000,
+      "temp13_input": 39.000000
+    },
+    "Core 4": {
+      "temp3_crit": 100.000000,
+      "temp3_crit_alarm": 0.000000,
+      "temp3_input": 37.000000,
+      "temp3_max": 100.000000
+    },
+    "Core 8": {
+      "temp4_crit": 100.000000,
+      "temp4_crit_alarm": 0.000000,
+      "temp4_input": 39.000000,
+      "temp4_max": 100.000000
+    },
+    "Package id 0": {
+      "temp1_crit": 100.000000,
+      "temp1_crit_alarm": 0.000000,
+      "temp1_input": 42.000000,
+      "temp1_max": 100.000000
+    }
+  },
+  "iwlwifi_1-isa-0000": {
+    "Adapter": "ISA adapter",
+    "temp1": {}
+  },
+  "nvme-isa-0000": {
+    "Adapter": "ISA adapter",
+    "temp1": {
+      "temp1_alarm": 0.000000,
+      "temp1_crit": 93.850000,
+      "temp1_input": 36.850000,
+      "temp1_max": 89.850000,
+      "temp1_min": -5.150000
+    }
+  }
+}
