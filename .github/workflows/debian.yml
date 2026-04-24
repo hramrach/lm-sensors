@@ -23,7 +23,7 @@ jobs:
       - name: 🧰 Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install libtest-cmd-perl librrd-dev valgrind sed \
+          sudo apt-get install libtest-cmd-perl librrd-dev valgrind sed jq \
             libcapture-tiny-perl libdatetime-perl libdevel-cover-perl libdigest-md5-perl libfile-spec-perl libjson-xs-perl libmodule-load-conditional-perl libscalar-list-utils-perl libtime-hires-perl
       - name: 🏗️ Build code
         run: |
