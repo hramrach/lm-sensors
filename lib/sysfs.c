@@ -570,13 +570,25 @@ static int sensors_read_dynamic_chip(sensors_chip_features *chip,
 
 	while ((ent = readdir(dir))) {
 		char *name;
-		int nr;
+		int nr, type;
+		struct stat st;
 
-		/* Skip directories and symlinks */
-		if (ent->d_type != DT_REG)
+		/* Skip directories and special files */
+		if (ent->d_type == DT_DIR)
 			continue;
-
 		name = ent->d_name;
+		if (fstatat(dirfd(dir), name, &st, 0)) {
+			fprintf(stderr, "%s/%s: %s.\n", dev_path, name, sensors_strerror(errno));
+			continue;
+		}
+		type = (st.st_mode & S_IFMT);
+		switch (type) {
+			case S_IFREG: break;
+			default:
+				      fprintf(stderr, "%s/%s: Not a regular file.\n", dev_path, name);
+				      /* fallthrough */
+			case S_IFDIR: continue;
+		}
 
 		sftype = sensors_subfeature_get_type(name, &nr);
 		if (sftype == SENSORS_SUBFEATURE_UNKNOWN)
