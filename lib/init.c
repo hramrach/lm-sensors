@@ -176,6 +176,21 @@ static int add_config_from_dir(const char *dir)
 	return res;
 }
 
+static int chips_cmp(const void *a_, const void *b_)
+{
+	const sensors_chip_features *a = a_;
+	const sensors_chip_features *b = b_;
+
+#define BUF_SIZE 200
+	char a_buf[BUF_SIZE] = {0};
+	char b_buf[BUF_SIZE] = {0};
+
+	sensors_snprintf_chip_name(a_buf, sizeof(a_buf), &a->chip);
+	sensors_snprintf_chip_name(b_buf, sizeof(b_buf), &b->chip);
+
+	return strcmp(a_buf, b_buf);
+}
+
 /* Ideally, initialization and configuraton file loading should be exposed
    separately, to make it possible to load several configuration files. */
 int sensors_init(FILE *input)
@@ -187,6 +202,9 @@ int sensors_init(FILE *input)
 	if ((res = sensors_read_sysfs_bus()) ||
 	    (res = sensors_read_sysfs_chips()))
 		goto exit_cleanup;
+
+	qsort(sensors_proc_chips, sensors_proc_chips_count,
+	      sizeof(*sensors_proc_chips), chips_cmp);
 
 	if (input) {
 		res = parse_config(input, NULL);
