@@ -114,6 +114,37 @@ the following tests are recommended.
    the application using libsensors. If you find any anomalies, record
    your results and report.
 
+### Gathering test data
+
+The sensor readings depend on content of sysfs files and config file. In case
+of hard to reproduce problem (eg. unexpected scaling for a particular sensor)
+it may be useful to collect the sensor data that is showing the problem, and
+attaching it to a bug report.
+
+With a bash shell and the typical Linux filesystem layout this command should
+create an archive `hwmon-data.tgz` with the relevant data:
+
+    tar --warning=no-file-shrank -czvf hwmon-data.tgz $(find /sys -name hwmon[0-9]\*) /etc/sensors3.conf /etc/sensors.conf /etc/sensors.conf.d
+
+To test that the issue can be reproduced with the gathered data:
+
+    mkdir /tmp/hwmon-data
+    tar -C /tmp/hwmon-data -xzvf hwmon-data.tgz
+    SENSORS_SYSFS_ROOT=/tmp/hwmon-data/sys sensors -c /tmp/hwmon-data/etc/sensors3.conf
+
+At the start of the sensors output you should see the warning
+
+    /tmp/hwmon-data/sys: Not a sysfs mount.
+
+followed by the usual sensor readings. If the output shows the warning as well
+as the problem you now have the data required to reproduce the problem in
+`hwmon-data.tgz` and can attach it to an issue to make it easier for developers
+to diagnose.
+
+Note that the connfig files (`/etc/sensors3.conf` `/etc/sensors.conf`
+`/etc/sensors.conf.d`) may be in a different location when your sensors build
+uses a custom `ETCDIR`.
+
 ## Other Information
 
 The lm_sensors website can be found at
